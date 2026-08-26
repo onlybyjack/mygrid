@@ -221,7 +221,7 @@ export default function Page() {
           <button className="primary" type="submit" disabled={loading}><b>{loading ? "피드 불러오는 중…" : "피드 가져오기"}</b><span>↑</span></button>
         </form>
         <section className="install-tip" aria-label="홈 화면에 추가하는 방법">
-          <div className="tip-heading"><div><small>TIP</small><h2>앱처럼 더 편하게</h2><p>마이그리드를 홈 화면에 추가해 보세요.</p></div><b>{String(activeTip + 1).padStart(2, "0")} / {String(INSTALL_TIPS.length).padStart(2, "0")}</b></div>
+          <div className="tip-heading"><div><small>TIP</small><h2>앱으로 더 편하게</h2><p>마이그리드를 홈 화면에 추가해 보세요.</p></div><b>{String(activeTip + 1).padStart(2, "0")} / {String(INSTALL_TIPS.length).padStart(2, "0")}</b></div>
           <div className="tip-slider" onTouchStart={startTipSwipe} onTouchEnd={endTipSwipe}>
             {(() => { const tip = INSTALL_TIPS[activeTip]; return <article className={`tip-slide tip-${tip.kind}`} key={tip.kind}>
               <div className="tip-copy"><small>{tip.platform}</small><strong>{tip.title}</strong><p>{tip.description}</p></div>
