@@ -236,9 +236,12 @@ export default function Page() {
   function startTilePress(event: React.PointerEvent<HTMLButtonElement>, postId: string) {
     if (event.pointerType === "mouse" && event.button !== 0) return;
     if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current);
+    const tile = event.currentTarget;
+    const pointerId = event.pointerId;
     longPressTimer.current = window.setTimeout(() => {
       setDraggedPostId(postId);
       suppressTileClick.current = true;
+      try { tile.setPointerCapture(pointerId); } catch { /* Pointer may have ended before the long press. */ }
       const handleMove = (moveEvent: Event) => {
         const point = "touches" in moveEvent ? (moveEvent as unknown as TouchEvent).touches[0] : moveEvent as MouseEvent;
         if (point.clientX === undefined || point.clientY === undefined) return;
@@ -255,6 +258,7 @@ export default function Page() {
         document.removeEventListener("mouseup", handleUp);
         document.removeEventListener("touchmove", handleMove);
         document.removeEventListener("touchend", handleUp);
+        try { tile.releasePointerCapture(pointerId); } catch { /* Pointer capture is already released. */ }
         const target = document.elementFromPoint(point.clientX, point.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
         const from = drafts.findIndex((post) => post.id === postId);
         const to = drafts.findIndex((post) => post.id === target);
