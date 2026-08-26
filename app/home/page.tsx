@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, ClipboardEvent, TouchEvent, useEffect, useRef, useState } from "react";
+import { ChangeEvent, ClipboardEvent, useEffect, useRef, useState } from "react";
 import { deleteDraftPhoto, readDraftPhotos, saveDraftOrder, saveDraftPhotos } from "../../lib/instagram-export";
 import GridMark from "../components/grid-mark";
 
@@ -8,12 +8,6 @@ type Post = { id: string; image: string; draft?: boolean };
 const IDENTITY_KEY = "mygrid:identity";
 const CROP_WIDTH = 1200;
 const CROP_HEIGHT = 1600;
-
-const INSTALL_TIPS = [
-  { kind: "ios", platform: "iPhone · Safari", title: "공유 버튼을 눌러보세요", description: "Safari 하단의 공유 아이콘을 선택하세요." },
-  { kind: "android", platform: "Android · Chrome", title: "홈 화면에 추가를 선택하세요", description: "메뉴에서 ‘홈 화면에 추가’를 누르면 끝이에요." },
-  { kind: "done", platform: "mygrid 앱", title: "이제 앱처럼 열어보세요", description: "홈 화면의 mygrid 아이콘에서 바로 시작할 수 있어요." },
-] as const;
 
 function mediaUrl(url: string) {
   if (url.startsWith("/") || url.startsWith("blob:") || url.startsWith("data:")) return url;
@@ -169,6 +163,7 @@ function TrashIcon() {
 
 export default function Page() {
   const [preview, setPreview] = useState(false);
+  const [homeStep, setHomeStep] = useState<1 | 2>(1);
   const [username, setUsername] = useState("");
   const [drafts, setDrafts] = useState<Post[]>([]);
   const [message, setMessage] = useState("");
@@ -178,7 +173,6 @@ export default function Page() {
   const [draggedPostId, setDraggedPostId] = useState<string | null>(null);
   const [dragOverPostId, setDragOverPostId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
-  const [activeTip, setActiveTip] = useState(0);
   const [editorFiles, setEditorFiles] = useState<File[]>([]);
   const [editorIndex, setEditorIndex] = useState(0);
   const [editorZoom, setEditorZoom] = useState(1);
@@ -186,11 +180,11 @@ export default function Page() {
   const [editorOffsetY, setEditorOffsetY] = useState(0);
   const [editorImageSize, setEditorImageSize] = useState<{ width: number; height: number } | null>(null);
   const [editorPreviewUrl, setEditorPreviewUrl] = useState("");
+  const [editorFromOnboarding, setEditorFromOnboarding] = useState(false);
   const editedFilesRef = useRef<File[]>([]);
   const editorPointers = useRef(new Map<number, { x: number; y: number }>());
   const editorGesture = useRef<{ startX: number; startY: number; baseX: number; baseY: number; distance: number; zoom: number } | null>(null);
   const draftsRef = useRef<Post[]>([]);
-  const tipStartX = useRef<number | null>(null);
   const longPressTimer = useRef<number | null>(null);
   const pressOrigin = useRef<{ x: number; y: number; pointerId: number } | null>(null);
   const longPressPostIdRef = useRef<string | null>(null);
@@ -226,10 +220,6 @@ export default function Page() {
     if ("serviceWorker" in navigator) void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
   }, []);
 
-  useEffect(() => {
-    const timer = window.setInterval(() => setActiveTip((current) => (current + 1) % INSTALL_TIPS.length), 5000);
-    return () => window.clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     if (!selectedPost) return;
@@ -258,8 +248,9 @@ export default function Page() {
     saveIdentity(next);
   }
 
-  function openPhotoEditor(files: File[]) {
+  function openPhotoEditor(files: File[], fromOnboarding = false) {
     editedFilesRef.current = [];
+    setEditorFromOnboarding(fromOnboarding);
     setPreview(true);
     setEditorFiles(files);
     setEditorIndex(0);
@@ -416,6 +407,11 @@ export default function Page() {
     setMessage("");
   }
 
+  function continueToScreenshot() {
+    setHomeStep(2);
+    setMessage("");
+  }
+
   function editProfileIdentity() {
     setSelectedPost(null);
     setPreview(false);
@@ -434,7 +430,7 @@ export default function Page() {
         setMessage("그리드 캡처를 읽지 못했어요. 다시 선택해 주세요.");
         return;
       }
-      openPhotoEditor(selected);
+      openPhotoEditor(selected, true);
     } catch {
       input.value = "";
       setMessage("그리드 캡처를 읽지 못했어요. 다시 선택해 주세요.");
@@ -451,7 +447,7 @@ export default function Page() {
       setMessage("그리드 캡처를 읽지 못했어요. 다시 붙여넣어 주세요.");
       return;
     }
-    openPhotoEditor(selected);
+    openPhotoEditor(selected, true);
   }
 
   function startTilePress(event: React.PointerEvent<HTMLButtonElement>, postId: string) {
@@ -633,21 +629,6 @@ export default function Page() {
     persistDrafts(nextPosts);
   }
 
-  function moveTip(direction: number) {
-    setActiveTip((current) => (current + direction + INSTALL_TIPS.length) % INSTALL_TIPS.length);
-  }
-
-  function startTipSwipe(event: TouchEvent<HTMLDivElement>) {
-    tipStartX.current = event.touches[0]?.clientX ?? null;
-  }
-
-  function endTipSwipe(event: TouchEvent<HTMLDivElement>) {
-    if (tipStartX.current === null) return;
-    const distance = (event.changedTouches[0]?.clientX ?? tipStartX.current) - tipStartX.current;
-    tipStartX.current = null;
-    if (Math.abs(distance) < 40) return;
-    moveTip(distance < 0 ? 1 : -1);
-  }
 
   if (!hydrated) {
     return <main className="splash-page" aria-label="MyGrid 불러오는 중" aria-busy="true">
@@ -657,36 +638,17 @@ export default function Page() {
   }
 
   if (!preview) {
-    return <main className="connect-page">
-      <header className="brand-row"><div className="brand"><div className="logo"><GridMark /></div><strong>mygrid</strong></div></header>
-      <section className="connect-content">
-        <h1>내 피드를<br /><span>깔끔하게 정리해보세요.</span></h1>
-        <p className="lead">프로필 캡처 한 장이면<br />나만의 그리드를 미리 볼 수 있어요.</p>
-        <section className="connect-card upload-card" onPaste={pasteGridScreenshot} tabIndex={0}>
-          <div className="card-heading"><small>01 / START</small><h2>프로필을 불러올까요?</h2></div>
-          <div className="identity-fields">
-            <label><span>Instagram 아이디 <em>선택 입력</em></span><div className="handle-input"><b>@</b><input value={username} onChange={(event) => updateUsername(event.target.value)} placeholder="프로필에 표시할 이름" autoCapitalize="none" autoCorrect="off" /></div></label>
-          </div>
-          {message && <div className="error" role="alert">{message}</div>}
-          <label className="upload-option upload-option-featured"><span className="upload-option-mark"><GridMark uniform /></span><span className="upload-option-copy"><b>인스타 프로필 캡처</b><small>한 장 올리면 자동으로 나눠요.</small></span><span className="upload-option-arrow">↑</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label>
-          <button className="primary start-button" type="button" onClick={startEmptyProfile}><b>빈 피드로 바로 시작</b><span>→</span></button>
-        </section>
-        <section className="install-tip" aria-label="홈 화면에 추가하는 방법">
-          <div className="tip-heading"><div><small>TIP</small><h2>앱으로 더 편하게</h2><p>마이그리드를 홈 화면에 추가해 보세요.</p></div><b>{String(activeTip + 1).padStart(2, "0")} / {String(INSTALL_TIPS.length).padStart(2, "0")}</b></div>
-          <div className="tip-slider" onTouchStart={startTipSwipe} onTouchEnd={endTipSwipe}>
-            {(() => { const tip = INSTALL_TIPS[activeTip]; return <article className={`tip-slide tip-${tip.kind}`} key={tip.kind}>
-              <div className="tip-copy"><small>{tip.platform}</small><strong>{tip.title}</strong><p>{tip.description}</p></div>
-              <div className="tip-visual" aria-hidden="true">
-                <div className="tip-device-bar"><i /> <span>{tip.kind === "ios" ? "Safari" : tip.kind === "android" ? "Chrome" : "mygrid"}</span><i /></div>
-                {tip.kind === "ios" && <><div className="tip-screen-lines"><i /><i /><i /></div><div className="tip-share">↑</div></>}
-                {tip.kind === "android" && <><div className="tip-screen-lines"><i /><i /><i /></div><div className="tip-menu-item"><span>＋</span> 홈 화면에 추가</div></>}
-                {tip.kind === "done" && <div className="tip-app-icon"><GridMark /><small>mygrid</small></div>}
-              </div>
-            </article>; })()}
-          </div>
-          <div className="tip-footer"><div className="tip-dots">{INSTALL_TIPS.map((tip, index) => <button key={tip.kind} type="button" className={index === activeTip ? "active" : ""} aria-label={`${index + 1}단계 보기`} aria-current={index === activeTip} onClick={() => setActiveTip(index)} />)}</div><span>좌우로 넘겨보기</span></div>
-        </section>
-      </section>
+    return <main className="onboarding-page" onPaste={homeStep === 2 ? pasteGridScreenshot : undefined}>
+      <header className="onboarding-header"><div className="brand"><div className="logo"><GridMark /></div><strong>mygrid</strong></div><span>{String(homeStep).padStart(2, "0")} / 02</span></header>
+      {homeStep === 1 ? <section className="onboarding-screen onboarding-identity" aria-labelledby="identity-title">
+        <div className="onboarding-copy"><small>WELCOME TO MYGRID</small><h1 id="identity-title">인스타 아이디를<br />알려주세요.</h1><p>피드 상단에 표시할 이름이에요.<br />나중에 다시 바꿀 수 있어요.</p></div>
+        <div className="onboarding-bottom"><label className="onboarding-input-label" htmlFor="onboarding-username">Instagram 아이디 <em>선택 입력</em></label><div className="onboarding-input"><b>@</b><input id="onboarding-username" value={username} onChange={(event) => updateUsername(event.target.value)} placeholder="아이디를 입력해 주세요" autoCapitalize="none" autoCorrect="off" /></div><button className="onboarding-primary" type="button" onClick={continueToScreenshot}><b>다음</b><span>→</span></button><button className="onboarding-text-button" type="button" onClick={continueToScreenshot}>건너뛰기</button></div>
+      </section> : <section className="onboarding-screen onboarding-capture" aria-labelledby="capture-title">
+        <div className="onboarding-copy"><small>02 / 02 · PROFILE</small><h1 id="capture-title">프로필 화면을<br />캡처해 주세요.</h1><p>인스타 프로필 전체 화면을 올리면<br />사진을 자동으로 나눠드려요.</p></div>
+        <div className="capture-guide" aria-label="인스타 프로필 캡처 예시"><div className="guide-phone"><div className="guide-status"><i /> Instagram <i /></div><div className="guide-profile"><span /><i /><i /><i /></div><div className="guide-grid">{Array.from({ length: 9 }, (_, index) => <i key={index} />)}</div><div className="guide-scan" /><div className="guide-finger" /></div></div>
+        {message && <div className="error onboarding-error" role="alert">{message}</div>}
+        <div className="onboarding-bottom"><label className="onboarding-upload"><GridMark uniform /><span><b>캡처한 이미지 선택</b><small>프로필 캡처 한 장이면 충분해요.</small></span><strong>↑</strong><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label><button className="onboarding-primary" type="button" onClick={startEmptyProfile}><b>빈 피드로 바로 시작</b><span>→</span></button><div className="onboarding-secondary-actions"><button className="onboarding-text-button" type="button" onClick={() => setHomeStep(1)}>이전</button><button className="onboarding-text-button" type="button" onClick={startEmptyProfile}>건너뛰기</button></div></div>
+      </section>}
     </main>;
   }
 
@@ -708,6 +670,6 @@ export default function Page() {
         <button className="viewer-delete" type="button" onClick={() => removePost(selectedPost.id)} aria-label="게시물 삭제" title="게시물 삭제"><TrashIcon /></button>
       </div>
     </div>}
-    {editorFiles.length > 0 && editorPreviewUrl && <div className="photo-editor" role="dialog" aria-modal="true" aria-label="사진 편집"><div className="editor-panel"><div className="editor-heading"><button className="editor-close" type="button" aria-label="편집 취소" onClick={() => setEditorFiles([])}>×</button><span>{editorIndex + 1} / {editorFiles.length}</span></div><div className="crop-stage crop-portrait" onPointerDown={editorPointerDown} onPointerMove={editorPointerMove} onPointerUp={editorPointerUp} onPointerCancel={editorPointerUp} onWheel={editorWheel}><img src={editorPreviewUrl} alt="편집할 사진" onLoad={(event) => setEditorImageSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })} style={{ objectFit: editorImageSize && editorImageSize.width <= editorImageSize.height ? "cover" : "contain", transform: `translate(${editorOffsetX * 100}%, ${editorOffsetY * 100}%) scale(${editorZoom})` }} /><div className="crop-grid" aria-hidden="true"><i /><i /><i /><i /></div></div><button className="editor-confirm" type="button" onClick={() => void confirmCrop()}>{editorIndex + 1 < editorFiles.length ? "다음 →" : "→"}</button></div></div>}
+    {editorFiles.length > 0 && editorPreviewUrl && <div className="photo-editor" role="dialog" aria-modal="true" aria-label="사진 편집"><div className="editor-panel"><div className="editor-heading"><button className="editor-close" type="button" aria-label="편집 취소" onClick={() => { setEditorFiles([]); setMessage(""); if (editorFromOnboarding) { setPreview(false); setHomeStep(2); } }}>×</button><span>{editorIndex + 1} / {editorFiles.length}</span></div><div className="crop-stage crop-portrait" onPointerDown={editorPointerDown} onPointerMove={editorPointerMove} onPointerUp={editorPointerUp} onPointerCancel={editorPointerUp} onWheel={editorWheel}><img src={editorPreviewUrl} alt="편집할 사진" onLoad={(event) => setEditorImageSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })} style={{ objectFit: editorImageSize && editorImageSize.width <= editorImageSize.height ? "cover" : "contain", transform: `translate(${editorOffsetX * 100}%, ${editorOffsetY * 100}%) scale(${editorZoom})` }} /><div className="crop-grid" aria-hidden="true"><i /><i /><i /><i /></div></div><button className="editor-confirm" type="button" onClick={() => void confirmCrop()}>{editorIndex + 1 < editorFiles.length ? "다음 →" : "→"}</button></div></div>}
   </>;
 }
