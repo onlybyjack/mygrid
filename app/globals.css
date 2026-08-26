@@ -20,9 +20,7 @@ button { cursor:pointer; }
 .grid-mark:not(.grid-mark-uniform) i:nth-child(3n) { opacity:.6; }
 .brand-row { height:68px; padding:0 22px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); }
 .brand { display:flex; align-items:center; gap:10px; font-size:18px; letter-spacing:-.06em; }
-.brand-note { color:var(--muted); font-size:9px; font-weight:700; letter-spacing:.12em; }
 .connect-content { padding:42px 22px 28px; }
-.hero-kicker { margin:0 0 12px; color:var(--muted); font-size:10px; font-weight:800; letter-spacing:.16em; }
 h1 { margin:0 0 15px; font-size:38px; line-height:1.08; letter-spacing:-.1em; }
 h1 span { white-space:nowrap; }
 .lead { max-width:390px; margin:0 0 28px; color:var(--muted); font-size:14px; line-height:1.55; }

@@ -66,59 +66,74 @@ async function splitGridScreenshot(file: File): Promise<File[]> {
   }
   sourceContext.drawImage(bitmap, 0, 0);
   const sourcePixels = sourceContext.getImageData(0, 0, width, height).data;
-  const expectedHeight = tileWidth * 1.3333;
-  const rowActivity = (row: number, column: number) => {
+  const tileHeight = Math.round(tileWidth * 4 / 3);
+  const rowActivity = (row: number) => {
     let active = 0;
     let samples = 0;
-    const left = column * tileWidth;
-    const right = column === 2 ? width : left + tileWidth;
-    for (let x = left + 4; x < right - 4; x += 8) {
+    for (let x = 4; x < width - 4; x += 8) {
       const index = (row * width + x) * 4;
       const red = sourcePixels[index];
       const green = sourcePixels[index + 1];
       const blue = sourcePixels[index + 2];
-      const luminance = red * 0.299 + green * 0.587 + blue * 0.114;
-      if (luminance < 242 || Math.max(red, green, blue) - Math.min(red, green, blue) > 18) active += 1;
+      if (red * 0.299 + green * 0.587 + blue * 0.114 < 90) active += 1;
       samples += 1;
     }
-    return active / samples > 0.12;
+    return active / samples > 0.55;
   };
-  const segments: Array<{ column: number; top: number; height: number }> = [];
-  for (let column = 0; column < 3; column += 1) {
-    let start = -1;
-    let blankRows = 0;
-    for (let row = 0; row <= height; row += 1) {
-      const active = row < height && rowActivity(row, column);
-      if (active) {
-        if (start < 0) start = row;
-        blankRows = 0;
-      } else if (start >= 0) {
-        blankRows += 1;
-        if (blankRows >= 10 || row === height) {
-          const end = row - blankRows;
-          if (end - start > 60) segments.push({ column, top: start, height: end - start });
-          start = -1;
-          blankRows = 0;
-        }
+  let gridTop = -1;
+  let darkRows = 0;
+  for (let row = Math.floor(height * 0.2); row < height; row += 1) {
+    if (rowActivity(row)) {
+      darkRows += 1;
+      if (darkRows >= 2) {
+        gridTop = row - darkRows + 1;
+        break;
+      }
+    } else {
+      darkRows = 0;
+    }
+  }
+  if (gridTop < 0) {
+    bitmap.close();
+    return [];
+  }
+  const tileIsEmpty = (row: number, column: number) => {
+    let active = 0;
+    let samples = 0;
+    const left = column * tileWidth;
+    const top = gridTop + row * tileHeight;
+    const bottom = Math.min(height, top + tileHeight);
+    const right = column === 2 ? width : left + tileWidth;
+    for (let y = top + 8; y < bottom - 8; y += 12) {
+      for (let x = left + 8; x < right - 8; x += 12) {
+        const index = (y * width + x) * 4;
+        const red = sourcePixels[index];
+        const green = sourcePixels[index + 1];
+        const blue = sourcePixels[index + 2];
+        if (red * 0.299 + green * 0.587 + blue * 0.114 < 242 || Math.max(red, green, blue) - Math.min(red, green, blue) > 18) active += 1;
+        samples += 1;
       }
     }
-  }
-  segments.sort((a, b) => a.top - b.top || a.column - b.column);
-  for (const segment of segments) {
-    const pieces = Math.max(1, Math.round(segment.height / expectedHeight));
-    for (let piece = 0; piece < pieces; piece += 1) {
-      const pieceTop = segment.top + (segment.height * piece) / pieces;
-      const pieceHeight = segment.height / pieces;
+    return active / samples < 0.01;
+  };
+  const rows = Math.floor((height - gridTop) / tileHeight);
+  const canvases: HTMLCanvasElement[] = [];
+  for (let row = 0; row < rows; row += 1) {
+    for (let column = 0; column < 3; column += 1) {
+      if (tileIsEmpty(row, column)) continue;
       const canvas = document.createElement("canvas");
       canvas.width = tileWidth;
-      canvas.height = Math.round(pieceHeight);
+      canvas.height = tileHeight;
       const context = canvas.getContext("2d");
       if (!context) continue;
-      context.drawImage(bitmap, segment.column * tileWidth, pieceTop, tileWidth, pieceHeight, 0, 0, tileWidth, Math.round(pieceHeight));
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
-      if (blob) output.push(new File([blob], `grid-${output.length + 1}.jpg`, { type: "image/jpeg" }));
+      context.drawImage(bitmap, column * tileWidth, gridTop + row * tileHeight, tileWidth, tileHeight, 0, 0, tileWidth, tileHeight);
+      canvases.push(canvas);
     }
   }
+  const blobs = await Promise.all(canvases.map((canvas) => new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92))));
+  blobs.forEach((blob) => {
+    if (blob) output.push(new File([blob], `grid-${output.length + 1}.jpg`, { type: "image/jpeg" }));
+  });
   bitmap.close();
   return output;
 }
@@ -216,6 +231,7 @@ export default function Page() {
 
   function openPhotoEditor(files: File[]) {
     editedFilesRef.current = [];
+    setPreview(true);
     setEditorFiles(files);
     setEditorIndex(0);
     setEditorZoom(1);
@@ -310,7 +326,7 @@ export default function Page() {
       editorGesture.current = { startX: event.clientX, startY: event.clientY, baseX: editorOffsetX, baseY: editorOffsetY, distance: 0, zoom: editorZoom };
     } else if (editorPointers.current.size === 2) {
       const points = [...editorPointers.current.values()];
-      editorGesture.current = { startX: 0, startY: 0, baseX: editorOffsetX, baseY: editorOffsetY, distance: Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y), zoom: editorZoom };
+      editorGesture.current = { startX: (points[0].x + points[1].x) / 2, startY: (points[0].y + points[1].y) / 2, baseX: editorOffsetX, baseY: editorOffsetY, distance: Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y), zoom: editorZoom };
     }
   }
 
@@ -325,8 +341,16 @@ export default function Page() {
       setEditorOffsetX(clampEditorOffset(editorGesture.current.baseX + (event.clientX - editorGesture.current.startX) / stage.width, bounds.x));
       setEditorOffsetY(clampEditorOffset(editorGesture.current.baseY + (event.clientY - editorGesture.current.startY) / stage.height, bounds.y));
     } else if (points.length === 2 && editorGesture.current.distance > 0) {
+      const stage = event.currentTarget.getBoundingClientRect();
       const distance = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y);
-      setEditorZoom(Math.max(1, Math.min(2.5, editorGesture.current.zoom * distance / editorGesture.current.distance)));
+      const midpointX = (points[0].x + points[1].x) / 2;
+      const midpointY = (points[0].y + points[1].y) / 2;
+      const nextZoom = Math.max(1, Math.min(2.5, editorGesture.current.zoom * distance / editorGesture.current.distance));
+      const zoomRatio = nextZoom / editorGesture.current.zoom;
+      const bounds = editorPanBounds(nextZoom);
+      setEditorOffsetX(clampEditorOffset(editorGesture.current.baseX + (1 - zoomRatio) * (editorGesture.current.startX - (stage.left + stage.width / 2)) / stage.width + (midpointX - editorGesture.current.startX) / stage.width, bounds.x));
+      setEditorOffsetY(clampEditorOffset(editorGesture.current.baseY + (1 - zoomRatio) * (editorGesture.current.startY - (stage.top + stage.height / 2)) / stage.height + (midpointY - editorGesture.current.startY) / stage.height, bounds.y));
+      setEditorZoom(nextZoom);
     }
   }
 
@@ -338,7 +362,13 @@ export default function Page() {
 
   function editorWheel(event: React.WheelEvent<HTMLDivElement>) {
     event.preventDefault();
-    setEditorZoom((zoom) => Math.max(1, Math.min(2.5, zoom - event.deltaY * 0.002)));
+    const stage = event.currentTarget.getBoundingClientRect();
+    const nextZoom = Math.max(1, Math.min(2.5, editorZoom - event.deltaY * 0.002));
+    const zoomRatio = nextZoom / editorZoom;
+    const bounds = editorPanBounds(nextZoom);
+    setEditorOffsetX(clampEditorOffset(editorOffsetX + (1 - zoomRatio) * (event.clientX - (stage.left + stage.width / 2)) / stage.width, bounds.x));
+    setEditorOffsetY(clampEditorOffset(editorOffsetY + (1 - zoomRatio) * (event.clientY - (stage.top + stage.height / 2)) / stage.height, bounds.y));
+    setEditorZoom(nextZoom);
   }
 
   function choosePhotos(event: ChangeEvent<HTMLInputElement>) {
@@ -358,21 +388,20 @@ export default function Page() {
   }
 
   async function chooseGridScreenshot(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
+    const input = event.currentTarget;
+    const file = input.files?.[0];
     if (!file) return;
-    if (!username.trim()) {
-      setMessage("Instagram 아이디를 입력해 주세요.");
-      return;
-    }
+    setMessage("프로필 캡처를 분석하고 있어요.");
     try {
       const selected = await splitGridScreenshot(file);
+      input.value = "";
       if (!selected.length) {
         setMessage("그리드 캡처를 읽지 못했어요. 다시 선택해 주세요.");
         return;
       }
       openPhotoEditor(selected);
     } catch {
+      input.value = "";
       setMessage("그리드 캡처를 읽지 못했어요. 다시 선택해 주세요.");
     }
   }
@@ -381,10 +410,7 @@ export default function Page() {
     const file = Array.from(event.clipboardData.files).find((item) => item.type.startsWith("image/"));
     if (!file) return;
     event.preventDefault();
-    if (!username.trim()) {
-      setMessage("Instagram 아이디를 입력해 주세요.");
-      return;
-    }
+    setMessage("프로필 캡처를 분석하고 있어요.");
     const selected = await splitGridScreenshot(file).catch(() => []);
     if (!selected.length) {
       setMessage("그리드 캡처를 읽지 못했어요. 다시 붙여넣어 주세요.");
@@ -495,9 +521,8 @@ export default function Page() {
 
   if (!preview) {
     return <main className="connect-page">
-      <header className="brand-row"><div className="brand"><div className="logo"><GridMark /></div><strong>mygrid</strong></div><small className="brand-note">GRID PLANNER</small></header>
+      <header className="brand-row"><div className="brand"><div className="logo"><GridMark /></div><strong>mygrid</strong></div></header>
       <section className="connect-content">
-        <p className="hero-kicker">INSTAGRAM GRID ORGANIZER</p>
         <h1>내 피드를<br /><span>깔끔하게 정리해보세요.</span></h1>
         <p className="lead">프로필 캡처 한 장이면<br />나만의 그리드를 미리 볼 수 있어요.</p>
         <section className="connect-card upload-card" onPaste={pasteGridScreenshot} tabIndex={0}>
