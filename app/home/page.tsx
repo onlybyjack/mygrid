@@ -173,6 +173,8 @@ export default function Page() {
   const [drafts, setDrafts] = useState<Post[]>([]);
   const [message, setMessage] = useState("");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [selectedPostIds, setSelectedPostIds] = useState<Set<string>>(new Set());
+  const [longPressPostId, setLongPressPostId] = useState<string | null>(null);
   const [draggedPostId, setDraggedPostId] = useState<string | null>(null);
   const [dragOverPostId, setDragOverPostId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -191,6 +193,8 @@ export default function Page() {
   const tipStartX = useRef<number | null>(null);
   const longPressTimer = useRef<number | null>(null);
   const pressOrigin = useRef<{ x: number; y: number; pointerId: number } | null>(null);
+  const longPressPostIdRef = useRef<string | null>(null);
+  const longPressMoved = useRef(false);
   const draggedPostIdRef = useRef<string | null>(null);
   const dragOverPostIdRef = useRef<string | null>(null);
   const draggedTile = useRef<HTMLButtonElement | null>(null);
@@ -457,10 +461,10 @@ export default function Page() {
     const pointerId = event.pointerId;
     pressOrigin.current = { x: event.clientX, y: event.clientY, pointerId };
     longPressTimer.current = window.setTimeout(() => {
-      pressOrigin.current = null;
-      draggedPostIdRef.current = postId;
+      longPressPostIdRef.current = postId;
+      longPressMoved.current = false;
       dragOverPostIdRef.current = null;
-      setDraggedPostId(postId);
+      setLongPressPostId(postId);
       suppressTileClick.current = true;
       draggedTile.current = tile;
       try { tile.setPointerCapture(pointerId); } catch { /* Pointer may have ended before the long press. */ }
@@ -508,13 +512,26 @@ export default function Page() {
   function moveTile(event: React.PointerEvent<HTMLElement>) {
     if (!draggedPostIdRef.current) {
       const origin = pressOrigin.current;
-      if (origin?.pointerId === event.pointerId && Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 10) {
+      const longPressedId = longPressPostIdRef.current;
+      if (longPressedId) {
+        if (!longPressMoved.current && origin?.pointerId === event.pointerId && Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 10) {
+          longPressMoved.current = true;
+          longPressPostIdRef.current = null;
+          pressOrigin.current = null;
+          setLongPressPostId(null);
+          draggedPostIdRef.current = longPressedId;
+          setDraggedPostId(longPressedId);
+        } else if (!longPressMoved.current) {
+          return;
+        }
+      } else if (origin?.pointerId === event.pointerId && Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 10) {
         if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current);
         longPressTimer.current = null;
         pressOrigin.current = null;
+        return;
       }
-      return;
     }
+    if (!draggedPostIdRef.current) return;
     event.preventDefault();
     const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
     if (target !== dragOverPostIdRef.current) {
@@ -530,7 +547,14 @@ export default function Page() {
     pressOrigin.current = null;
     const draggedId = draggedPostIdRef.current;
     if (!draggedId) {
+      const selectedId = longPressPostIdRef.current;
+      if (selectedId && !longPressMoved.current) toggleSelectedPost(selectedId);
+      try { draggedTile.current?.releasePointerCapture(event.pointerId); } catch { /* Pointer capture is already released. */ }
+      longPressPostIdRef.current = null;
+      longPressMoved.current = false;
+      setLongPressPostId(null);
       draggedTile.current = null;
+      window.setTimeout(() => { suppressTileClick.current = false; }, 250);
       return;
     }
     const target = dragOverPostIdRef.current || document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
@@ -538,9 +562,12 @@ export default function Page() {
     try { draggedTile.current?.releasePointerCapture(event.pointerId); } catch { /* Pointer capture is already released. */ }
     draggedPostIdRef.current = null;
     dragOverPostIdRef.current = null;
+    longPressPostIdRef.current = null;
+    longPressMoved.current = false;
     draggedTile.current = null;
     setDraggedPostId(null);
     setDragOverPostId(null);
+    setLongPressPostId(null);
     window.setTimeout(() => { suppressTileClick.current = false; }, 0);
   }
 
@@ -550,15 +577,52 @@ export default function Page() {
     pressOrigin.current = null;
     draggedPostIdRef.current = null;
     dragOverPostIdRef.current = null;
+    longPressPostIdRef.current = null;
+    longPressMoved.current = false;
     draggedTile.current = null;
     setDraggedPostId(null);
     setDragOverPostId(null);
+    setLongPressPostId(null);
     suppressTileClick.current = false;
   }
 
   function openPost(post: Post) {
     if (suppressTileClick.current) return;
     setSelectedPost(post);
+  }
+
+  function openPostFromTile(event: React.MouseEvent<HTMLButtonElement>, post: Post) {
+    const image = event.currentTarget.querySelector("img");
+    openPost(image?.currentSrc ? { ...post, image: image.currentSrc } : post);
+  }
+
+  function toggleSelectedPost(postId: string) {
+    setSelectedPostIds((current) => {
+      const next = new Set(current);
+      if (next.has(postId)) next.delete(postId);
+      else next.add(postId);
+      return next;
+    });
+  }
+
+  function handleTileClick(event: React.MouseEvent<HTMLButtonElement>, post: Post) {
+    if (suppressTileClick.current) return;
+    if (selectedPostIds.size > 0) {
+      toggleSelectedPost(post.id);
+      return;
+    }
+    openPostFromTile(event, post);
+  }
+
+  function removeSelectedPosts() {
+    if (!selectedPostIds.size || !window.confirm(`${selectedPostIds.size}개의 게시물을 삭제할까요?`)) return;
+    const selectedIds = selectedPostIds;
+    const nextPosts = drafts.filter((post) => !selectedIds.has(post.id));
+    draftsRef.current = nextPosts;
+    setDrafts(nextPosts);
+    setSelectedPostIds(new Set());
+    void Promise.all([...selectedIds].filter((postId) => postId.startsWith("draft-")).map((postId) => deleteDraftPhoto(postId))).catch(() => undefined);
+    persistDrafts(nextPosts);
   }
 
   function removePost(postId: string) {
@@ -633,9 +697,10 @@ export default function Page() {
       <div className="profile-summary"><div className="avatar" /><div className="stat"><b>{allPosts.length}</b><small>게시물</small></div><div className="stat"><b>—</b><small>팔로워</small></div><div className="stat"><b>—</b><small>팔로잉</small></div></div>
       <h2 className="profile-name">{username || "mygrid"}</h2>
       <div className="profile-tabs"><div className="profile-tab selected"><GridMark uniform /></div></div>
-      {allPosts.length ? <div className="grid">{Array.from({ length: Math.ceil(allPosts.length / 3) }, (_, row) => <div className="grid-row" key={row}>{[0, 1, 2].map((column) => { const post = allPosts[row * 3 + column]; return post ? <button className={`tile${draggedPostId === post.id ? " is-dragging" : ""}${dragOverPostId === post.id ? " drop-target" : ""}`} type="button" key={post.id} data-post-id={post.id} onPointerDown={(event) => startTilePress(event, post.id)} onContextMenu={(event) => event.preventDefault()} onDragStart={(event) => event.preventDefault()} onSelect={(event) => event.preventDefault()} onClick={() => openPost(post)} aria-label="길게 눌러 게시물 이동"><img src={mediaUrl(post.image)} alt="게시물" /></button> : <div className="tile placeholder" key={`empty-${row}-${column}`} />; })}</div>)}</div> : <div className="empty"><b>피드가 기다리고 있어요</b><small>사진을 추가해 나만의 그리드를 만들어 보세요.</small></div>}
+      {allPosts.length ? <div className="grid">{Array.from({ length: Math.ceil(allPosts.length / 3) }, (_, row) => <div className="grid-row" key={row}>{[0, 1, 2].map((column) => { const post = allPosts[row * 3 + column]; if (!post) return <div className="tile placeholder" key={`empty-${row}-${column}`} />; const selected = selectedPostIds.has(post.id); const selectionMode = selectedPostIds.size > 0 || longPressPostId !== null; return <button className={`tile${draggedPostId === post.id ? " is-dragging" : ""}${dragOverPostId === post.id ? " drop-target" : ""}`} type="button" key={post.id} data-post-id={post.id} onPointerDown={(event) => startTilePress(event, post.id)} onContextMenu={(event) => event.preventDefault()} onDragStart={(event) => event.preventDefault()} onSelect={(event) => event.preventDefault()} onClick={(event) => handleTileClick(event, post)} aria-pressed={selected} aria-label={selectionMode ? "게시물 선택" : "길게 눌러 게시물 이동"}><img src={mediaUrl(post.image)} alt="게시물" /><span className={`tile-selector${selectionMode ? " is-visible" : ""}${selected ? " is-selected" : ""}`} aria-hidden="true"><i /></span></button>; })}</div>)}</div> : <div className="empty"><b>피드가 기다리고 있어요</b><small>사진을 추가해 나만의 그리드를 만들어 보세요.</small></div>}
     </section>
     </main>
+    {selectedPostIds.size > 0 && <button className="selection-delete" type="button" onClick={removeSelectedPosts} aria-label="선택한 게시물 삭제" title="선택한 게시물 삭제"><TrashIcon /></button>}
     {selectedPost && <div className="image-viewer" role="dialog" aria-modal="true" aria-label="Instagram 게시물 보기" onClick={() => setSelectedPost(null)}>
       <div className="viewer-content" onClick={(event) => event.stopPropagation()}>
         <button className="viewer-close" type="button" onClick={() => setSelectedPost(null)} aria-label="닫기" title="닫기"><CloseIcon /></button>
