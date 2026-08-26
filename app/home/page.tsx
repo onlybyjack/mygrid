@@ -404,7 +404,7 @@ export default function Page() {
   return <>
     <main className="preview-page">
     <header className="profile-bar"><label className="profile-add-button" aria-label="다음 사진 추가">＋<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={choosePhotos} /></label><strong>@{username || "mygrid"}</strong><span aria-hidden="true" /></header>
-    <section className="profile-scroll" onPointerMove={moveTile} onPointerUp={finishTilePress} onPointerCancel={cancelTilePress}>
+    <section className="profile-scroll" onPointerMove={moveTile} onPointerUp={finishTilePress}>
       <div className="profile-summary"><div className="avatar"><GridMark /></div><div className="stat"><b>{allPosts.length}</b><small>게시물</small></div><div className="stat"><b>—</b><small>팔로워</small></div><div className="stat"><b>—</b><small>팔로잉</small></div></div>
       <h2 className="profile-name">{username || "mygrid"}</h2>
       <div className="profile-tabs"><span className="selected"><GridMark uniform /></span></div>
