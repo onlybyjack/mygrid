@@ -54,7 +54,14 @@ function readUser(payload: unknown): InstagramUser | null {
 async function readHtmlProfile(username: string) {
   const response = await fetch(`https://www.instagram.com/${encodeURIComponent(username)}/`, {
     cache: "no-store",
-    headers: { Accept: "text/html", "User-Agent": "Mozilla/5.0 (compatible; MyGrid/1.0)" },
+    headers: {
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
+      "Sec-Fetch-Dest": "document",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Fetch-Site": "none",
+    },
   });
   if (!response.ok) return { user: null, found: false };
   const html = await response.text();
@@ -92,9 +99,16 @@ export async function GET(request: Request) {
         cache: "no-store",
         headers: {
           Accept: "application/json",
-          "User-Agent": "Mozilla/5.0 (compatible; MyGrid/1.0)",
+          "Accept-Language": "en-US,en;q=0.9",
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
           "X-IG-App-ID": INSTAGRAM_APP_ID,
+          "X-ASBD-ID": "198387",
+          "X-Requested-With": "XMLHttpRequest",
           Referer: `https://www.instagram.com/${encodeURIComponent(username)}/`,
+          Origin: "https://www.instagram.com",
+          "Sec-Fetch-Dest": "empty",
+          "Sec-Fetch-Mode": "cors",
+          "Sec-Fetch-Site": "same-origin",
         },
       },
     );
