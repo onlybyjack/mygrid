@@ -97,11 +97,12 @@ async function readBrowserProfile(username: string) {
     import("@sparticuz/chromium"),
     import("puppeteer-core"),
   ]);
+  chromium.setGraphicsMode = false;
   const browser = await puppeteer.launch({
-    args: chromium.args,
+    args: await puppeteer.defaultArgs({ args: chromium.args, headless: "shell" }),
     defaultViewport: { width: 390, height: 844, deviceScaleFactor: 1 },
     executablePath: process.env.CHROME_PATH || await chromium.executablePath(),
-    headless: true,
+    headless: "shell",
   });
   try {
     const page = await browser.newPage();
@@ -194,9 +195,13 @@ export async function GET(request: Request) {
       htmlFound = fallback.found;
     }
     if (!user) {
-      const fallback = await readBrowserProfile(username);
-      user = fallback.user;
-      htmlFound = fallback.found;
+      try {
+        const fallback = await readBrowserProfile(username);
+        user = fallback.user;
+        htmlFound = fallback.found;
+      } catch (error) {
+        console.error("Chromium profile scraper failed", error instanceof Error ? error.message : String(error));
+      }
     }
     if (!user) return NextResponse.json({ error: htmlFound ? "Instagram 프로필을 찾지 못했습니다." : "Instagram 프로필을 불러오지 못했습니다. 잠시 후 다시 시도하세요." }, { status: htmlFound ? 404 : 502 });
     if (!user || string(user.username)?.toLowerCase() !== username.toLowerCase()) {
