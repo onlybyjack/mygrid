@@ -22,6 +22,7 @@ type InstagramUser = {
   polaris_ordered_timeline_connection?: {
     edges?: Array<{ node?: InstagramMedia }>;
   };
+  dom_media?: InstagramMedia[];
   all_media_count?: unknown;
 };
 
@@ -91,6 +92,66 @@ async function readHtmlProfile(username: string) {
   return parseHtmlProfile(await response.text(), username);
 }
 
+async function readBrowserProfile(username: string) {
+  const [{ default: chromium }, { default: puppeteer }] = await Promise.all([
+    import("@sparticuz/chromium"),
+    import("puppeteer-core"),
+  ]);
+  const browser = await puppeteer.launch({
+    args: chromium.args,
+    defaultViewport: { width: 390, height: 844, deviceScaleFactor: 1 },
+    executablePath: process.env.CHROME_PATH || await chromium.executablePath(),
+    headless: true,
+  });
+  try {
+    const page = await browser.newPage();
+    await page.setUserAgent("Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 Version/18.5 Mobile/15E148 Safari/604.1");
+    await page.goto(`https://www.instagram.com/${encodeURIComponent(username)}/`, { waitUntil: "domcontentloaded", timeout: 20000 });
+    await page.waitForNetworkIdle({ idleTime: 500, timeout: 10000 }).catch(() => undefined);
+    const profile = await page.evaluate((requestedUsername) => {
+      const imageUrl = (element: Element | null) => {
+        if (!element) return "";
+        const image = element as HTMLImageElement;
+        return image.currentSrc || image.src || "";
+      };
+      const avatar = document.querySelector('meta[property="og:image"]')?.getAttribute("content") || imageUrl(document.querySelector("header img"));
+      const media: Array<{ id: string; display_url: string }> = [];
+      const seen = new Set<string>();
+      document.querySelectorAll('a[href*="/p/"], a[href*="/reel/"]').forEach((anchor) => {
+        const image = imageUrl(anchor.querySelector("img"));
+        if (!image || image === avatar || seen.has(image)) return;
+        seen.add(image);
+        const href = (anchor as HTMLAnchorElement).href;
+        media.push({ id: href.split("/").filter(Boolean).pop() || `post-${media.length}`, display_url: image });
+      });
+      if (!media.length) {
+        document.querySelectorAll("article img").forEach((image) => {
+          const url = imageUrl(image);
+          if (!url || url === avatar || seen.has(url)) return;
+          seen.add(url);
+          media.push({ id: `post-${media.length}`, display_url: url });
+        });
+      }
+      const body = document.body?.innerText || "";
+      const title = document.title || "";
+      const found = title.toLowerCase().includes(requestedUsername.toLowerCase()) || Boolean(avatar) || media.length > 0;
+      return { avatar, media, found, isPrivate: /this account is private|비공개 계정/i.test(body) };
+    }, username);
+    if (!profile.found) return { user: null, found: false };
+    return {
+      user: {
+        username,
+        profile_pic_url: profile.avatar,
+        is_private: profile.isPrivate,
+        dom_media: profile.media,
+      },
+      found: true,
+    };
+  } finally {
+    await browser.close();
+  }
+}
+
 export async function GET(request: Request) {
   const username = new URL(request.url).searchParams.get("username")?.trim().replace(/^@/, "") || "";
   if (!USERNAME_PATTERN.test(username)) {
@@ -132,6 +193,11 @@ export async function GET(request: Request) {
       user = fallback.user;
       htmlFound = fallback.found;
     }
+    if (!user) {
+      const fallback = await readBrowserProfile(username);
+      user = fallback.user;
+      htmlFound = fallback.found;
+    }
     if (!user) return NextResponse.json({ error: htmlFound ? "Instagram 프로필을 찾지 못했습니다." : "Instagram 프로필을 불러오지 못했습니다. 잠시 후 다시 시도하세요." }, { status: htmlFound ? 404 : 502 });
     if (!user || string(user.username)?.toLowerCase() !== username.toLowerCase()) {
       return NextResponse.json({ error: "공개 Instagram 프로필만 가져올 수 있습니다." }, { status: 404 });
@@ -141,7 +207,7 @@ export async function GET(request: Request) {
     }
 
     const media = user.edge_owner_to_timeline_media;
-    const edges = media?.edges || user.polaris_ordered_timeline_connection?.edges || [];
+    const edges = media?.edges || user.polaris_ordered_timeline_connection?.edges || user.dom_media?.map((node) => ({ node })) || [];
     const posts = edges.flatMap(({ node }, index) => {
       if (!node) return [];
       const image = string(node.display_url) || string(node.display_uri) || string(node.thumbnail_src);
