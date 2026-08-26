@@ -167,6 +167,7 @@ export async function GET(request: Request) {
   try {
     let user: InstagramUser | null = null;
     const sourceStatuses: string[] = [];
+    let rateLimited = false;
     for (const host of ["www.instagram.com", "i.instagram.com"]) {
       if (user) break;
       try {
@@ -190,6 +191,7 @@ export async function GET(request: Request) {
           },
         );
         sourceStatuses.push(`${host}:${response.status}`);
+        if (response.status === 429) rateLimited = true;
         if (!response.ok) continue;
         try { user = readUser(await response.json()); } catch { /* Try the next Instagram host. */ }
         if (user) break;
@@ -213,6 +215,7 @@ export async function GET(request: Request) {
     }
     if (!user) {
       console.error("Instagram profile sources exhausted", sourceStatuses);
+      if (rateLimited) return NextResponse.json({ error: "Instagram에서 요청을 제한하고 있어요. 잠시 후 다시 시도해 주세요." }, { status: 429 });
       return NextResponse.json({ error: htmlFound ? "Instagram 프로필을 찾지 못했습니다." : "Instagram 프로필을 불러오지 못했습니다. 잠시 후 다시 시도하세요." }, { status: htmlFound ? 404 : 502 });
     }
     if (!user || string(user.username)?.toLowerCase() !== username.toLowerCase()) {
