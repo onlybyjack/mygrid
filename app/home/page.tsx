@@ -66,37 +66,55 @@ async function splitGridScreenshot(file: File): Promise<File[]> {
   }
   sourceContext.drawImage(bitmap, 0, 0);
   const sourcePixels = sourceContext.getImageData(0, 0, width, height).data;
-  const tileHeight = Math.round(tileWidth * 4 / 3);
-  const rowActivity = (row: number) => {
-    let active = 0;
+  const luminance = (x: number, y: number) => {
+    const index = (y * width + x) * 4;
+    return sourcePixels[index] * 0.299 + sourcePixels[index + 1] * 0.587 + sourcePixels[index + 2] * 0.114;
+  };
+  const rowContrast = (row: number) => {
+    if (row <= 0 || row >= height) return 0;
+    let contrast = 0;
     let samples = 0;
     for (let x = 4; x < width - 4; x += 8) {
-      const index = (row * width + x) * 4;
-      const red = sourcePixels[index];
-      const green = sourcePixels[index + 1];
-      const blue = sourcePixels[index + 2];
-      if (red * 0.299 + green * 0.587 + blue * 0.114 < 90) active += 1;
+      contrast += Math.abs(luminance(x, row) - luminance(x, row - 1));
       samples += 1;
     }
-    return active / samples > 0.55;
+    return samples ? contrast / samples / 255 : 0;
   };
-  let gridTop = -1;
-  let darkRows = 0;
-  for (let row = Math.floor(height * 0.2); row < height; row += 1) {
-    if (rowActivity(row)) {
-      darkRows += 1;
-      if (darkRows >= 2) {
-        gridTop = row - darkRows + 1;
-        break;
+  const verticalGapContrast = (top: number, tileHeight: number) => {
+    let contrast = 0;
+    let samples = 0;
+    for (let y = top + 8; y < Math.min(height, top + tileHeight) - 8; y += 8) {
+      for (const boundary of [tileWidth, tileWidth * 2]) {
+        const center = luminance(Math.min(width - 1, boundary), y);
+        const sides = (luminance(Math.max(0, boundary - 2), y) + luminance(Math.min(width - 1, boundary + 2), y)) / 2;
+        contrast += Math.abs(center - sides) / 255;
+        samples += 1;
       }
-    } else {
-      darkRows = 0;
     }
-  }
-  if (gridTop < 0) {
-    bitmap.close();
-    return [];
-  }
+    return samples ? contrast / samples : 0;
+  };
+
+  // A profile grid has two narrow vertical gutters and repeats its horizontal
+  // gutter at every tile height. Looking for those repeating edges works for
+  // both light and dark Instagram themes; the old dark-row check failed for
+  // light screenshots and for profiles whose first post was not dark.
+  const minimumTop = Math.floor(height * 0.12);
+  const maximumTop = Math.floor(height * 0.72);
+  const candidates = [4 / 3].map((ratio) => {
+    const candidateHeight = Math.max(40, Math.round(tileWidth * ratio));
+    let best = { top: Math.floor(height * 0.2), score: 0 };
+    for (let top = minimumTop; top <= maximumTop; top += 2) {
+      const rows = Math.min(4, Math.floor((height - top) / candidateHeight));
+      if (rows < 1) continue;
+      let horizontal = rowContrast(top);
+      for (let row = 1; row < rows; row += 1) horizontal += rowContrast(top + row * candidateHeight);
+      const score = verticalGapContrast(top, candidateHeight) * 0.7 + (horizontal / rows) * 0.3;
+      if (score > best.score) best = { top, score };
+    }
+    return { ...best, tileHeight: candidateHeight };
+  }).sort((a, b) => b.score - a.score)[0];
+  const gridTop = candidates.score >= 0.035 ? candidates.top : Math.floor(height * 0.2);
+  const tileHeight = candidates.score >= 0.035 ? candidates.tileHeight : Math.round(tileWidth * 4 / 3);
   const tileIsEmpty = (row: number, column: number) => {
     let active = 0;
     let samples = 0;
