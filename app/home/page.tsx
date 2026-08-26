@@ -201,9 +201,10 @@ export default function Page() {
 
   useEffect(() => {
     let mounted = true;
-    let revealTimer: number | null = null;
     let savedUsername = "";
-    const splashStartedAt = performance.now();
+    const revealTimer = window.setTimeout(() => {
+      if (mounted) setHydrated(true);
+    }, 420);
     try {
       const identity = JSON.parse(localStorage.getItem(IDENTITY_KEY) || "{}") as { username?: unknown };
       savedUsername = typeof identity.username === "string" ? identity.username : "";
@@ -216,16 +217,10 @@ export default function Page() {
       const restored = savedDrafts.map((post) => ({ id: post.id, image: post.image, draft: true }));
       setDrafts(restored);
       if (restored.length && savedUsername) setPreview(true);
-    }).catch(() => undefined).finally(() => {
-      if (!mounted) return;
-      const remaining = Math.max(0, 420 - (performance.now() - splashStartedAt));
-      revealTimer = window.setTimeout(() => {
-        if (mounted) setHydrated(true);
-      }, remaining);
-    });
+    }).catch(() => undefined);
     return () => {
       mounted = false;
-      if (revealTimer !== null) window.clearTimeout(revealTimer);
+      window.clearTimeout(revealTimer);
     };
   }, []);
 
