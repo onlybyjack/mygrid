@@ -17,6 +17,42 @@ function mediaUrl(url: string) {
   return `/api/image?url=${encodeURIComponent(url)}`;
 }
 
+async function splitGridScreenshot(file: File): Promise<File[]> {
+  const bitmap = await createImageBitmap(file);
+  const width = bitmap.width;
+  const height = bitmap.height;
+  const margin = Math.round(width * 0.025);
+  const tileWidth = Math.floor((width - margin * 2) / 3);
+  const top = Math.round(height * 0.08);
+  const tileHeight = Math.round(tileWidth * 1.3333);
+  const rows = Math.floor((height - top) / tileHeight);
+  const output: File[] = [];
+  const canvas = document.createElement("canvas");
+  canvas.width = tileWidth;
+  canvas.height = tileHeight;
+  const context = canvas.getContext("2d");
+  if (!context || tileWidth < 40 || rows < 1) {
+    bitmap.close();
+    return [];
+  }
+  for (let row = 0; row < rows; row += 1) {
+    for (let column = 0; column < 3; column += 1) {
+      context.clearRect(0, 0, tileWidth, tileHeight);
+      context.drawImage(bitmap, margin + column * tileWidth, top + row * tileHeight, tileWidth, tileHeight, 0, 0, tileWidth, tileHeight);
+      const pixels = context.getImageData(0, 0, tileWidth, tileHeight).data;
+      let visible = 0;
+      for (let index = 0; index < pixels.length; index += 16) {
+        if (pixels[index] < 242 || pixels[index + 1] < 242 || pixels[index + 2] < 242) visible += 1;
+      }
+      if (visible / (pixels.length / 16) < 0.08) continue;
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
+      if (blob) output.push(new File([blob], `grid-${output.length + 1}.jpg`, { type: "image/jpeg" }));
+    }
+  }
+  bitmap.close();
+  return output;
+}
+
 function CloseIcon() {
   return <svg className="viewer-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>;
 }
@@ -87,6 +123,26 @@ export default function Page() {
     event.target.value = "";
   }
 
+  async function chooseGridScreenshot(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const selected = await splitGridScreenshot(file);
+      if (!selected.length) {
+        setMessage("그리드 캡처를 읽지 못했어요. 다시 선택해 주세요.");
+        return;
+      }
+      const nextDrafts = selected.map((image, index) => ({ id: `draft-${Date.now()}-${index}`, image: URL.createObjectURL(image), draft: true }));
+      setDrafts(nextDrafts);
+      setMessage("");
+      setPreview(true);
+      void saveDraftPhotos(nextDrafts).catch(() => undefined);
+    } catch {
+      setMessage("그리드 캡처를 읽지 못했어요. 다시 선택해 주세요.");
+    }
+  }
+
   function removePost(postId: string) {
     const nextPosts = drafts.filter((post) => post.id !== postId);
     setDrafts(nextPosts);
@@ -130,6 +186,7 @@ export default function Page() {
           <div className="upload-note"><span>이 기기에 저장돼요</span><button type="button" aria-label="사진 저장 안내" aria-describedby="upload-note-detail">?</button><span id="upload-note-detail" role="tooltip">다음에 다시 열어도 그대로 남아 있어요.</span></div>
           {message && <div className="error" role="alert">{message}</div>}
           <label className="primary upload-submit"><b>사진 여러 장 고르기</b><span>↑</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={choosePhotos} /></label>
+          <label className="upload-secondary"><b>그리드 캡처 한 장</b><span>자동으로 나눠요</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label>
         </section>
         <section className="install-tip" aria-label="홈 화면에 추가하는 방법">
           <div className="tip-heading"><div><small>TIP</small><h2>앱으로 더 편하게</h2><p>마이그리드를 홈 화면에 추가해 보세요.</p></div><b>{String(activeTip + 1).padStart(2, "0")} / {String(INSTALL_TIPS.length).padStart(2, "0")}</b></div>
