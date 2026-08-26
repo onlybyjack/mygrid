@@ -130,11 +130,12 @@ h1 { margin:16px 0 13px; font-size:44px; line-height:1.04; letter-spacing:-.08em
 .profile-tabs .grid-mark i { background:var(--ink); }
 .profile-tabs .selected { color:var(--ink); border-bottom:2px solid var(--ink); }
 .grid-row { display:flex; gap:2px; }
-.tile { position:relative; flex:1; aspect-ratio:3 / 4; overflow:hidden; padding:0; border:0; color:inherit; background:#ede9df; cursor:grab; font:inherit; text-align:initial; touch-action:pan-y; user-select:none; transition:opacity .15s, transform .15s; }
+.tile { position:relative; flex:1; aspect-ratio:3 / 4; overflow:hidden; padding:0; border:0; color:inherit; background:#ede9df; cursor:grab; font:inherit; touch-action:pan-y; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; -webkit-user-drag:none; transition:opacity .15s, transform .15s; }
 .tile.is-dragging { opacity:.45; transform:scale(.96); cursor:grabbing; }
 .tile.drop-target { outline:3px solid var(--ink); outline-offset:-3px; }
 .tile:focus-visible { outline:3px solid var(--accent); outline-offset:-3px; }
 .tile img { width:100%; height:100%; display:block; object-fit:cover; }
+.tile img { pointer-events:none; -webkit-user-drag:none; }
 .tile.placeholder { background:var(--paper); }
 .image-viewer { position:fixed; z-index:20; inset:0; display:flex; align-items:center; justify-content:center; padding:24px 16px; background:#000d; }
 .viewer-content { position:relative; display:flex; max-width:min(92vw, 760px); max-height:calc(100dvh - 48px); flex-direction:column; align-items:center; gap:16px; }
