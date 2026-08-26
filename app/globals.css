@@ -27,6 +27,7 @@ h1 { margin:16px 0 13px; font-size:44px; line-height:1.04; letter-spacing:-.08em
 .connect-card h2 { margin:0 0 5px; font-size:18px; letter-spacing:-.04em; }
 .connect-card p { margin:0 0 24px; color:var(--muted); font-size:12px; }
 .connect-card label { display:block; margin-bottom:8px; color:var(--muted); font-size:11px; }
+.connect-card label.upload-submit { color:#fff; }
 .input-row { display:flex; align-items:center; min-height:46px; border-bottom:1px solid var(--ink); }
 .input-row span { color:var(--orange); font-size:20px; }
 .input-row input { width:100%; padding:12px 10px; border:0; outline:0; color:var(--ink); background:transparent; font-size:16px; }
@@ -40,6 +41,10 @@ h1 { margin:16px 0 13px; font-size:44px; line-height:1.04; letter-spacing:-.08em
 .primary:disabled { opacity:.55; }
 .upload-submit { position:relative; cursor:pointer; }
 .upload-submit input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+.upload-note { position:relative; display:flex; align-items:center; gap:6px; margin-top:-12px; color:var(--muted); font-size:11px; }
+.upload-note button { width:16px; height:16px; padding:0; border:1px solid var(--line); border-radius:50%; color:var(--muted); background:transparent; font-size:10px; line-height:14px; cursor:help; }
+.upload-note [role="tooltip"] { position:absolute; z-index:2; left:0; bottom:23px; display:none; width:max-content; max-width:220px; padding:8px 10px; border-radius:8px; color:var(--paper); background:var(--ink); box-shadow:0 8px 20px #17171720; font-size:11px; line-height:1.4; }
+.upload-note button:hover + [role="tooltip"], .upload-note button:focus-visible + [role="tooltip"] { display:block; }
 .install-tip { margin-top:28px; padding:18px; border:1px solid var(--line); border-radius:22px; background:#fff; }
 .tip-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
 .tip-heading small { color:var(--orange); font-size:10px; font-weight:800; letter-spacing:.12em; }

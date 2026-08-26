@@ -122,13 +122,14 @@ export default function Page() {
     return <main className="connect-page">
       <header className="brand-row"><div className="brand"><div className="logo"><GridMark /></div><strong>mygrid</strong></div></header>
       <section className="connect-content">
-        <h1>사진을 한 번에<br />나만의 피드로 만들어보세요.</h1>
-        <p className="lead">Instagram 게시물의 첫 장 이미지를 여러 장 골라,<br />감성적인 그리드로 정리해 보세요.</p>
+        <h1>사진을 골라<br />그리드로 채워보세요.</h1>
+        <p className="lead">첫 장 이미지만 골라<br />한 번에 올리면 충분해요.</p>
         <section className="connect-card upload-card">
-          <h2>피드 사진 올리기</h2>
-          <p>게시물마다 첫 장 이미지를 하나씩 선택해 주세요.</p>
+          <h2>처음 한 번만 올려주세요</h2>
+          <p>사진을 여러 장 고르면 게시물처럼 정리돼요.</p>
+          <div className="upload-note"><span>이 기기에 저장돼요</span><button type="button" aria-label="사진 저장 안내" aria-describedby="upload-note-detail">?</button><span id="upload-note-detail" role="tooltip">다음에 다시 열어도 그대로 남아 있어요.</span></div>
           {message && <div className="error" role="alert">{message}</div>}
-          <label className="primary upload-submit"><b>사진 여러 장 선택</b><span>↑</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={choosePhotos} /></label>
+          <label className="primary upload-submit"><b>사진 여러 장 고르기</b><span>↑</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={choosePhotos} /></label>
         </section>
         <section className="install-tip" aria-label="홈 화면에 추가하는 방법">
           <div className="tip-heading"><div><small>TIP</small><h2>앱으로 더 편하게</h2><p>마이그리드를 홈 화면에 추가해 보세요.</p></div><b>{String(activeTip + 1).padStart(2, "0")} / {String(INSTALL_TIPS.length).padStart(2, "0")}</b></div>
