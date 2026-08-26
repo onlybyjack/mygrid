@@ -201,7 +201,9 @@ export default function Page() {
 
   useEffect(() => {
     let mounted = true;
+    let revealTimer: number | null = null;
     let savedUsername = "";
+    const splashStartedAt = performance.now();
     try {
       const identity = JSON.parse(localStorage.getItem(IDENTITY_KEY) || "{}") as { username?: unknown };
       savedUsername = typeof identity.username === "string" ? identity.username : "";
@@ -215,9 +217,16 @@ export default function Page() {
       setDrafts(restored);
       if (restored.length && savedUsername) setPreview(true);
     }).catch(() => undefined).finally(() => {
-      if (mounted) setHydrated(true);
+      if (!mounted) return;
+      const remaining = Math.max(0, 420 - (performance.now() - splashStartedAt));
+      revealTimer = window.setTimeout(() => {
+        if (mounted) setHydrated(true);
+      }, remaining);
     });
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+      if (revealTimer !== null) window.clearTimeout(revealTimer);
+    };
   }, []);
 
   useEffect(() => {
