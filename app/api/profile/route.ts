@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+export const maxDuration = 30;
 
 const INSTAGRAM_APP_ID = "936619743392459";
 const USERNAME_PATTERN = /^[a-zA-Z0-9._]{1,30}$/;
