@@ -52,20 +52,7 @@ function readUser(payload: unknown): InstagramUser | null {
   return null;
 }
 
-async function readHtmlProfile(username: string) {
-  const response = await fetch(`https://www.instagram.com/${encodeURIComponent(username)}/`, {
-    cache: "no-store",
-    headers: {
-      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.9",
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
-      "Sec-Fetch-Dest": "document",
-      "Sec-Fetch-Mode": "navigate",
-      "Sec-Fetch-Site": "none",
-    },
-  });
-  if (!response.ok) return { user: null, found: false };
-  const html = await response.text();
+function parseHtmlProfile(html: string, username: string) {
   const users: InstagramUser[] = [];
   const scripts = /<script[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi;
   const collectUsers = (value: unknown) => {
@@ -87,6 +74,31 @@ async function readHtmlProfile(username: string) {
   return { user: timeline ? { ...profile, ...timeline } : profile, found: true };
 }
 
+async function readHtmlProfile(username: string) {
+  const response = await fetch(`https://www.instagram.com/${encodeURIComponent(username)}/`, {
+    cache: "no-store",
+    headers: {
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/151.0.0.0 Safari/537.36",
+      "Sec-Fetch-Dest": "document",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Fetch-Site": "none",
+    },
+  });
+  if (!response.ok) return { user: null, found: false };
+  return parseHtmlProfile(await response.text(), username);
+}
+
+async function readScraperApiProfile(username: string) {
+  const key = process.env.SCRAPER_API_KEY;
+  if (!key) return { user: null, found: false };
+  const target = `https://www.instagram.com/${encodeURIComponent(username)}/`;
+  const response = await fetch(`https://api.scraperapi.com/?api_key=${encodeURIComponent(key)}&url=${encodeURIComponent(target)}&render=false`, { cache: "no-store" });
+  if (!response.ok) return { user: null, found: false };
+  return parseHtmlProfile(await response.text(), username);
+}
+
 export async function GET(request: Request) {
   const username = new URL(request.url).searchParams.get("username")?.trim().replace(/^@/, "") || "";
   if (!USERNAME_PATTERN.test(username)) {
@@ -95,7 +107,10 @@ export async function GET(request: Request) {
 
   try {
     let user: InstagramUser | null = null;
+    const scraper = await readScraperApiProfile(username);
+    user = scraper.user;
     for (const host of ["www.instagram.com", "i.instagram.com"]) {
+      if (user) break;
       try {
         const response = await fetch(
           `https://${host}/api/v1/users/web_profile_info/?username=${encodeURIComponent(username)}`,
