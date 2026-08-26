@@ -115,6 +115,23 @@ export async function saveDraftPhotos(posts: ImportedMedia[]) {
   db.close();
 }
 
+export async function saveDraftOrder(posts: Pick<ImportedMedia, "id">[]) {
+  const db = await openDatabase();
+  const current = await request<Array<StoredMedia & { key: string }>>(db.transaction("media").objectStore("media").getAll());
+  const orderByKey = new Map(posts.map((post, order) => [`draft:${post.id}`, order]));
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction("media", "readwrite");
+    const store = transaction.objectStore("media");
+    current.forEach((post) => {
+      const order = orderByKey.get(post.key);
+      if (order !== undefined) store.put({ ...post, order });
+    });
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+  db.close();
+}
+
 export async function readDraftPhotos(): Promise<ImportedMedia[]> {
   const db = await openDatabase();
   const media = await request<Array<StoredMedia & { key: string }>>(db.transaction("media").objectStore("media").getAll());

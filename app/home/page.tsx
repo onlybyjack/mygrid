@@ -1,11 +1,13 @@
 "use client";
 
 import { ChangeEvent, ClipboardEvent, TouchEvent, useEffect, useRef, useState } from "react";
-import { deleteDraftPhoto, readDraftPhotos, saveDraftPhotos } from "../../lib/instagram-export";
+import { deleteDraftPhoto, readDraftPhotos, saveDraftOrder, saveDraftPhotos } from "../../lib/instagram-export";
 import GridMark from "../components/grid-mark";
 
 type Post = { id: string; image: string; draft?: boolean };
 const IDENTITY_KEY = "mygrid:identity";
+const CROP_WIDTH = 1200;
+const CROP_HEIGHT = 1600;
 
 const INSTALL_TIPS = [
   { kind: "ios", platform: "iPhone · Safari", title: "공유 버튼을 눌러보세요", description: "Safari 하단의 공유 아이콘을 선택하세요." },
@@ -22,6 +24,10 @@ let draftSaveQueue = Promise.resolve();
 
 function persistDrafts(posts: Post[]) {
   draftSaveQueue = draftSaveQueue.then(() => saveDraftPhotos(posts)).catch(() => undefined);
+}
+
+function persistDraftOrder(posts: Post[]) {
+  draftSaveQueue = draftSaveQueue.then(() => saveDraftOrder(posts)).catch(() => undefined);
 }
 
 async function preparePhoto(file: File): Promise<File> {
@@ -148,6 +154,7 @@ export default function Page() {
   const draftsRef = useRef<Post[]>([]);
   const tipStartX = useRef<number | null>(null);
   const longPressTimer = useRef<number | null>(null);
+  const draggedTile = useRef<HTMLButtonElement | null>(null);
   const suppressTileClick = useRef(false);
 
   useEffect(() => {
@@ -227,8 +234,8 @@ export default function Page() {
 
   async function cropPhoto(file: File): Promise<File> {
     const bitmap = await createImageBitmap(file);
-    const outputWidth = 1200;
-    const outputHeight = 1600;
+    const outputWidth = CROP_WIDTH;
+    const outputHeight = CROP_HEIGHT;
     const canvas = document.createElement("canvas");
     canvas.width = outputWidth;
     canvas.height = outputHeight;
@@ -236,7 +243,9 @@ export default function Page() {
     if (context) {
       context.fillStyle = "#fff";
       context.fillRect(0, 0, outputWidth, outputHeight);
-      const fitScale = Math.min(outputWidth / bitmap.width, outputHeight / bitmap.height);
+      const fitScale = bitmap.width > bitmap.height
+        ? Math.min(outputWidth / bitmap.width, outputHeight / bitmap.height)
+        : Math.max(outputWidth / bitmap.width, outputHeight / bitmap.height);
       const imageWidth = bitmap.width * fitScale * editorZoom;
       const imageHeight = bitmap.height * fitScale * editorZoom;
       const offsetX = editorOffsetX * outputWidth;
@@ -272,12 +281,14 @@ export default function Page() {
 
   function editorPanBounds(zoom = editorZoom) {
     if (!editorImageSize) return { x: 1, y: 1 };
-    const fitScale = Math.min(1200 / editorImageSize.width, 1600 / editorImageSize.height);
+    const fitScale = editorImageSize.width > editorImageSize.height
+      ? Math.min(CROP_WIDTH / editorImageSize.width, CROP_HEIGHT / editorImageSize.height)
+      : Math.max(CROP_WIDTH / editorImageSize.width, CROP_HEIGHT / editorImageSize.height);
     const scaledWidth = editorImageSize.width * fitScale * zoom;
     const scaledHeight = editorImageSize.height * fitScale * zoom;
     return {
-      x: Math.max(0, (scaledWidth - 1200) / 2400),
-      y: Math.max(0, (scaledHeight - 1600) / 3200),
+      x: Math.max(0, (scaledWidth - CROP_WIDTH) / (CROP_WIDTH * 2)),
+      y: Math.max(0, (scaledHeight - CROP_HEIGHT) / (CROP_HEIGHT * 2)),
     };
   }
 
@@ -390,37 +401,8 @@ export default function Page() {
     longPressTimer.current = window.setTimeout(() => {
       setDraggedPostId(postId);
       suppressTileClick.current = true;
+      draggedTile.current = tile;
       try { tile.setPointerCapture(pointerId); } catch { /* Pointer may have ended before the long press. */ }
-      const handleMove = (moveEvent: Event) => {
-        const point = "touches" in moveEvent ? (moveEvent as unknown as TouchEvent).touches[0] : moveEvent as MouseEvent;
-        if (point.clientX === undefined || point.clientY === undefined) return;
-        moveEvent.preventDefault();
-        const target = document.elementFromPoint(point.clientX, point.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
-        setDragOverPostId(target || null);
-        if (target && target !== postId) reorderPosts(postId, target);
-      };
-      const handleUp = (upEvent: Event) => {
-        const point = "changedTouches" in upEvent ? (upEvent as unknown as TouchEvent).changedTouches[0] : upEvent as MouseEvent;
-        if (!point) return;
-        document.removeEventListener("pointermove", handleMove);
-        document.removeEventListener("pointerup", handleUp);
-        document.removeEventListener("mousemove", handleMove);
-        document.removeEventListener("mouseup", handleUp);
-        document.removeEventListener("touchmove", handleMove);
-        document.removeEventListener("touchend", handleUp);
-        try { tile.releasePointerCapture(pointerId); } catch { /* Pointer capture is already released. */ }
-        const target = document.elementFromPoint(point.clientX, point.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
-        if (target && target !== postId) reorderPosts(postId, target);
-        setDraggedPostId(null);
-        setDragOverPostId(null);
-        window.setTimeout(() => { suppressTileClick.current = false; }, 0);
-      };
-      document.addEventListener("pointermove", handleMove, { passive: false });
-      document.addEventListener("pointerup", handleUp, { once: true });
-      document.addEventListener("mousemove", handleMove, { passive: false });
-      document.addEventListener("mouseup", handleUp, { once: true });
-      document.addEventListener("touchmove", handleMove, { passive: false });
-      document.addEventListener("touchend", handleUp, { once: true });
     }, 450);
   }
 
@@ -434,7 +416,7 @@ export default function Page() {
     next.splice(to, 0, moved);
     draftsRef.current = next;
     setDrafts(next);
-    persistDrafts(next);
+    persistDraftOrder(next);
   }
 
   function moveTile(event: React.PointerEvent<HTMLElement>) {
@@ -445,29 +427,17 @@ export default function Page() {
     if (target && target !== draggedPostId && target !== dragOverPostId) reorderPosts(draggedPostId, target);
   }
 
-  function moveTileTouch(event: React.TouchEvent<HTMLButtonElement>) {
-    if (!draggedPostId) return;
-    event.preventDefault();
-    const point = event.touches[0];
-    const target = point && document.elementFromPoint(point.clientX, point.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
-    setDragOverPostId(target || null);
-    if (target && target !== draggedPostId && target !== dragOverPostId) reorderPosts(draggedPostId, target);
-  }
-
-  function finishTileTouch(event: React.TouchEvent<HTMLButtonElement>) {
-    const point = event.changedTouches[0];
-    if (!point) return;
-    finishTilePress({ clientX: point.clientX, clientY: point.clientY } as React.PointerEvent<HTMLElement>);
-  }
-
   function finishTilePress(event: React.PointerEvent<HTMLElement>) {
     if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current);
     longPressTimer.current = null;
-    if (!draggedPostId) return;
-    const target = dragOverPostId || document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
-    if (target && target !== draggedPostId) {
-      if (target && target !== draggedPostId) reorderPosts(draggedPostId, target);
+    if (!draggedPostId) {
+      draggedTile.current = null;
+      return;
     }
+    const target = dragOverPostId || document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
+    if (target && target !== draggedPostId) reorderPosts(draggedPostId, target);
+    try { draggedTile.current?.releasePointerCapture(event.pointerId); } catch { /* Pointer capture is already released. */ }
+    draggedTile.current = null;
     setDraggedPostId(null);
     setDragOverPostId(null);
     window.setTimeout(() => { suppressTileClick.current = false; }, 0);
@@ -476,8 +446,10 @@ export default function Page() {
   function cancelTilePress() {
     if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current);
     longPressTimer.current = null;
+    draggedTile.current = null;
     setDraggedPostId(null);
     setDragOverPostId(null);
+    suppressTileClick.current = false;
   }
 
   function openPost(post: Post) {
@@ -553,11 +525,11 @@ export default function Page() {
   return <>
     <main className="preview-page">
     <header className="profile-bar"><label className="profile-add-button" aria-label="다음 사진 추가">＋<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={choosePhotos} /></label><strong>@{username || "mygrid"}</strong><span aria-hidden="true" /></header>
-    <section className="profile-scroll" onPointerMove={moveTile} onPointerUp={finishTilePress}>
+    <section className="profile-scroll" onPointerMove={moveTile} onPointerUp={finishTilePress} onPointerCancel={cancelTilePress}>
       <div className="profile-summary"><div className="avatar" /><div className="stat"><b>{allPosts.length}</b><small>게시물</small></div><div className="stat"><b>—</b><small>팔로워</small></div><div className="stat"><b>—</b><small>팔로잉</small></div></div>
       <h2 className="profile-name">{username || "mygrid"}</h2>
       <div className="profile-tabs"><div className="profile-tab selected"><GridMark uniform /></div></div>
-      {allPosts.length ? <div className="grid">{Array.from({ length: Math.ceil(allPosts.length / 3) }, (_, row) => <div className="grid-row" key={row}>{[0, 1, 2].map((column) => { const post = allPosts[row * 3 + column]; return post ? <button className={`tile${draggedPostId === post.id ? " is-dragging" : ""}${dragOverPostId === post.id ? " drop-target" : ""}`} type="button" key={post.id} data-post-id={post.id} onPointerDown={(event) => startTilePress(event, post.id)} onPointerMove={moveTile} onPointerUp={finishTilePress} onTouchMove={moveTileTouch} onTouchEnd={finishTileTouch} onContextMenu={(event) => event.preventDefault()} onDragStart={(event) => event.preventDefault()} onSelect={(event) => event.preventDefault()} onClick={() => openPost(post)} aria-label="길게 눌러 게시물 이동"><img src={mediaUrl(post.image)} alt="게시물" /></button> : <div className="tile placeholder" key={`empty-${row}-${column}`} />; })}</div>)}</div> : <div className="empty"><b>피드가 기다리고 있어요</b><small>사진을 추가해 나만의 그리드를 만들어 보세요.</small></div>}
+      {allPosts.length ? <div className="grid">{Array.from({ length: Math.ceil(allPosts.length / 3) }, (_, row) => <div className="grid-row" key={row}>{[0, 1, 2].map((column) => { const post = allPosts[row * 3 + column]; return post ? <button className={`tile${draggedPostId === post.id ? " is-dragging" : ""}${dragOverPostId === post.id ? " drop-target" : ""}`} type="button" key={post.id} data-post-id={post.id} onPointerDown={(event) => startTilePress(event, post.id)} onContextMenu={(event) => event.preventDefault()} onDragStart={(event) => event.preventDefault()} onSelect={(event) => event.preventDefault()} onClick={() => openPost(post)} aria-label="길게 눌러 게시물 이동"><img src={mediaUrl(post.image)} alt="게시물" /></button> : <div className="tile placeholder" key={`empty-${row}-${column}`} />; })}</div>)}</div> : <div className="empty"><b>피드가 기다리고 있어요</b><small>사진을 추가해 나만의 그리드를 만들어 보세요.</small></div>}
     </section>
     </main>
     {selectedPost && <div className="image-viewer" role="dialog" aria-modal="true" aria-label="Instagram 게시물 보기" onClick={() => setSelectedPost(null)}>
@@ -567,6 +539,6 @@ export default function Page() {
         <button className="viewer-delete" type="button" onClick={() => removePost(selectedPost.id)} aria-label="게시물 삭제" title="게시물 삭제"><TrashIcon /></button>
       </div>
     </div>}
-    {editorFiles.length > 0 && editorPreviewUrl && <div className="photo-editor" role="dialog" aria-modal="true" aria-label="사진 편집"><div className="editor-panel"><div className="editor-heading"><button className="editor-close" type="button" aria-label="편집 취소" onClick={() => setEditorFiles([])}>×</button><span>{editorIndex + 1} / {editorFiles.length}</span></div><div className="crop-stage crop-portrait" onPointerDown={editorPointerDown} onPointerMove={editorPointerMove} onPointerUp={editorPointerUp} onPointerCancel={editorPointerUp} onWheel={editorWheel}><img src={editorPreviewUrl} alt="편집할 사진" onLoad={(event) => setEditorImageSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })} style={{ transform: `translate(${editorOffsetX * 100}%, ${editorOffsetY * 100}%) scale(${editorZoom})` }} /><div className="crop-grid" aria-hidden="true"><i /><i /><i /><i /></div></div><button className="editor-confirm" type="button" onClick={() => void confirmCrop()}>{editorIndex + 1 < editorFiles.length ? "다음 →" : "→"}</button></div></div>}
+    {editorFiles.length > 0 && editorPreviewUrl && <div className="photo-editor" role="dialog" aria-modal="true" aria-label="사진 편집"><div className="editor-panel"><div className="editor-heading"><button className="editor-close" type="button" aria-label="편집 취소" onClick={() => setEditorFiles([])}>×</button><span>{editorIndex + 1} / {editorFiles.length}</span></div><div className="crop-stage crop-portrait" onPointerDown={editorPointerDown} onPointerMove={editorPointerMove} onPointerUp={editorPointerUp} onPointerCancel={editorPointerUp} onWheel={editorWheel}><img src={editorPreviewUrl} alt="편집할 사진" onLoad={(event) => setEditorImageSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })} style={{ objectFit: editorImageSize && editorImageSize.width <= editorImageSize.height ? "cover" : "contain", transform: `translate(${editorOffsetX * 100}%, ${editorOffsetY * 100}%) scale(${editorZoom})` }} /><div className="crop-grid" aria-hidden="true"><i /><i /><i /><i /></div></div><button className="editor-confirm" type="button" onClick={() => void confirmCrop()}>{editorIndex + 1 < editorFiles.length ? "다음 →" : "→"}</button></div></div>}
   </>;
 }
