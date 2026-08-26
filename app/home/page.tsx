@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, TouchEvent, useEffect, useRef, useState } from "react";
+import { ChangeEvent, ClipboardEvent, TouchEvent, useEffect, useRef, useState } from "react";
 import { deleteDraftPhoto, readDraftPhotos, saveDraftPhotos } from "../../lib/instagram-export";
 import GridMark from "../components/grid-mark";
 
@@ -23,15 +23,52 @@ async function splitGridScreenshot(file: File): Promise<File[]> {
   const height = bitmap.height;
   const margin = Math.round(width * 0.025);
   const tileWidth = Math.floor((width - margin * 2) / 3);
-  const top = Math.round(height * 0.08);
   const tileHeight = Math.round(tileWidth * 1.3333);
-  const rows = Math.floor((height - top) / tileHeight);
   const output: File[] = [];
+  const source = document.createElement("canvas");
+  source.width = width;
+  source.height = height;
+  const sourceContext = source.getContext("2d");
   const canvas = document.createElement("canvas");
   canvas.width = tileWidth;
   canvas.height = tileHeight;
   const context = canvas.getContext("2d");
-  if (!context || tileWidth < 40 || rows < 1) {
+  if (!sourceContext || !context || tileWidth < 40) {
+    bitmap.close();
+    return [];
+  }
+  sourceContext.drawImage(bitmap, 0, 0);
+  const sourcePixels = sourceContext.getImageData(0, 0, width, height).data;
+  const rowVariance = (row: number) => {
+    let total = 0;
+    let squared = 0;
+    let samples = 0;
+    for (let x = margin; x < width - margin; x += 8) {
+      const index = (row * width + x) * 4;
+      const luminance = sourcePixels[index] * 0.299 + sourcePixels[index + 1] * 0.587 + sourcePixels[index + 2] * 0.114;
+      total += luminance;
+      squared += luminance * luminance;
+      samples += 1;
+    }
+    const average = total / samples;
+    return squared / samples - average * average;
+  };
+  const findActiveEdge = (start: number, step: number) => {
+    let streak = 0;
+    let edge = start;
+    for (let row = start; row >= 0 && row < height; row += step) {
+      if (rowVariance(row) > 180) {
+        if (!streak) edge = row;
+        streak += 1;
+        if (streak >= 8) return edge;
+      } else streak = 0;
+    }
+    return step > 0 ? Math.round(height * 0.08) : height;
+  };
+  const top = findActiveEdge(0, 1);
+  const bottom = findActiveEdge(height - 1, -1);
+  const rows = Math.floor((bottom - top) / tileHeight);
+  if (rows < 1) {
     bitmap.close();
     return [];
   }
@@ -143,6 +180,22 @@ export default function Page() {
     }
   }
 
+  async function pasteGridScreenshot(event: ClipboardEvent<HTMLElement>) {
+    const file = Array.from(event.clipboardData.files).find((item) => item.type.startsWith("image/"));
+    if (!file) return;
+    event.preventDefault();
+    const selected = await splitGridScreenshot(file).catch(() => []);
+    if (!selected.length) {
+      setMessage("그리드 캡처를 읽지 못했어요. 다시 붙여넣어 주세요.");
+      return;
+    }
+    const nextDrafts = selected.map((image, index) => ({ id: `draft-${Date.now()}-${index}`, image: URL.createObjectURL(image), draft: true }));
+    setDrafts(nextDrafts);
+    setMessage("");
+    setPreview(true);
+    void saveDraftPhotos(nextDrafts).catch(() => undefined);
+  }
+
   function removePost(postId: string) {
     const nextPosts = drafts.filter((post) => post.id !== postId);
     setDrafts(nextPosts);
@@ -180,9 +233,9 @@ export default function Page() {
       <section className="connect-content">
         <h1>사진을 골라<br />그리드로 채워보세요.</h1>
         <p className="lead">첫 장 이미지만 골라 한 번에 올리면 충분해요.</p>
-        <section className="connect-card upload-card">
+        <section className="connect-card upload-card" onPaste={pasteGridScreenshot} tabIndex={0}>
           <h2>처음 한 번만 올려주세요</h2>
-          <p>사진을 여러 장 고르면 게시물처럼 정리돼요.</p>
+          <p>사진을 고르거나, 그리드 캡처를 붙여넣어도 돼요.</p>
           <div className="upload-note"><span>이 기기에 저장돼요</span><button type="button" aria-label="사진 저장 안내" aria-describedby="upload-note-detail">?</button><span id="upload-note-detail" role="tooltip">다음에 다시 열어도 그대로 남아 있어요.</span></div>
           {message && <div className="error" role="alert">{message}</div>}
           <label className="primary upload-submit"><b>사진 여러 장 고르기</b><span>↑</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={choosePhotos} /></label>
