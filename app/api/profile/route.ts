@@ -54,7 +54,7 @@ function readUser(payload: unknown): InstagramUser | null {
 
 function parseHtmlProfile(html: string, username: string) {
   const users: InstagramUser[] = [];
-  const scripts = /<script[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi;
+  const scripts = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
   const collectUsers = (value: unknown) => {
     if (!value || typeof value !== "object") return;
     if (Array.isArray(value)) { value.forEach(collectUsers); return; }
@@ -65,7 +65,8 @@ function parseHtmlProfile(html: string, username: string) {
   };
   let match: RegExpExecArray | null;
   while ((match = scripts.exec(html))) {
-    try { collectUsers(JSON.parse(match[1])); } catch { /* Ignore unrelated page state. */ }
+    if (!/\btype\s*=\s*["']application\/json["']/i.test(match[1])) continue;
+    try { collectUsers(JSON.parse(match[2])); } catch { /* Ignore unrelated page state. */ }
   }
   const matching = users.filter((user) => string(user.username)?.toLowerCase() === username.toLowerCase());
   if (!matching.length) return { user: null, found: false };
@@ -94,7 +95,7 @@ async function readScraperApiProfile(username: string) {
   const key = process.env.SCRAPER_API_KEY;
   if (!key) return { user: null, found: false };
   const target = `https://www.instagram.com/${encodeURIComponent(username)}/`;
-  const response = await fetch(`https://api.scraperapi.com/?api_key=${encodeURIComponent(key)}&url=${encodeURIComponent(target)}&render=false`, { cache: "no-store" });
+  const response = await fetch(`https://api.scraperapi.com/?api_key=${encodeURIComponent(key)}&url=${encodeURIComponent(target)}&render=true&country_code=kr&device_type=mobile`, { cache: "no-store" });
   if (!response.ok) return { user: null, found: false };
   return parseHtmlProfile(await response.text(), username);
 }
