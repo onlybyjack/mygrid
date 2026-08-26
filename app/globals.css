@@ -38,6 +38,8 @@ h1 { margin:16px 0 13px; font-size:44px; line-height:1.04; letter-spacing:-.08em
 .primary b { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:14px; }
 .primary span { width:32px; height:32px; display:grid; place-items:center; flex:none; border-radius:50%; color:var(--ink); background:var(--accent); font-size:19px; }
 .primary:disabled { opacity:.55; }
+.upload-submit { position:relative; cursor:pointer; }
+.upload-submit input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
 .install-tip { margin-top:28px; padding:18px; border:1px solid var(--line); border-radius:22px; background:#fff; }
 .tip-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
 .tip-heading small { color:var(--orange); font-size:10px; font-weight:800; letter-spacing:.12em; }
