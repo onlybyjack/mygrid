@@ -232,14 +232,14 @@ export default function Page() {
       <header className="brand-row"><div className="brand"><div className="logo"><GridMark /></div><strong>mygrid</strong></div></header>
       <section className="connect-content">
         <h1>사진을 골라<br />그리드로 채워보세요.</h1>
-        <p className="lead">첫 장 이미지만 골라 한 번에 올리면 충분해요.</p>
+        <p className="lead">한 번만 올리면, 나만의 피드가 완성돼요.</p>
         <section className="connect-card upload-card" onPaste={pasteGridScreenshot} tabIndex={0}>
-          <h2>처음 한 번만 올려주세요</h2>
-          <p>사진을 고르거나, 그리드 캡처를 붙여넣어도 돼요.</p>
+          <h2>피드를 가져오는 방법</h2>
+          <p>편한 방법을 골라주세요.</p>
           <div className="upload-note"><span>이 기기에 저장돼요</span><button type="button" aria-label="사진 저장 안내" aria-describedby="upload-note-detail">?</button><span id="upload-note-detail" role="tooltip">다음에 다시 열어도 그대로 남아 있어요.</span></div>
           {message && <div className="error" role="alert">{message}</div>}
-          <label className="primary upload-submit"><b>사진 여러 장 고르기</b><span>↑</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={choosePhotos} /></label>
-          <label className="upload-secondary"><b>그리드 캡처 한 장</b><span>자동으로 나눠요</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label>
+          <label className="upload-option upload-option-featured"><span className="upload-option-mark">▦</span><span className="upload-option-copy"><b>인스타 프로필 캡처</b><small>한 장 올리면 자동으로 나눠요.</small></span><span className="upload-option-arrow">↑</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label>
+          <label className="upload-option"><span className="upload-option-mark">＋</span><span className="upload-option-copy"><b>사진 직접 올리기</b><small>첫 장 이미지를 여러 장 선택해요.</small></span><span className="upload-option-arrow">↑</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={choosePhotos} /></label>
         </section>
         <section className="install-tip" aria-label="홈 화면에 추가하는 방법">
           <div className="tip-heading"><div><small>TIP</small><h2>앱으로 더 편하게</h2><p>마이그리드를 홈 화면에 추가해 보세요.</p></div><b>{String(activeTip + 1).padStart(2, "0")} / {String(INSTALL_TIPS.length).padStart(2, "0")}</b></div>
