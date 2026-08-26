@@ -6,7 +6,7 @@
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#F7F4EC",
-  "theme_color": "#FF7473",
+  "theme_color": "#EFEFEC",
   "icons": [
     {
       "src": "/mygrid-icon.svg",

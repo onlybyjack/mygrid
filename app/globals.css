@@ -1,8 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Noto+Sans+KR:wght@500;600;700;800&display=swap');
 
-:root { --ink:#36344f; --muted:#8589a2; --paper:#fffaf7; --panel:#ffffff; --line:#ebe5e4; --accent:#ff7473; --orange:#df6070; --yellow:#ffc95c; --sky:#4db3d4; }
+:root { --ink:#171717; --muted:#777777; --paper:#f7f7f5; --panel:#ffffff; --line:#e1e1df; --accent:#efefec; --orange:#4b4b4b; --yellow:#a9a9a7; --sky:#737371; }
 * { box-sizing:border-box; }
-html, body { margin:0; min-height:100%; background:#36344f; }
+html, body { margin:0; min-height:100%; background:#171717; }
 body { color:var(--ink); font-family:Inter,'Noto Sans KR',sans-serif; }
 button, input { font:inherit; }
 button { cursor:pointer; }
@@ -16,9 +16,8 @@ button { cursor:pointer; }
 .logo { width:40px; height:40px; display:grid; place-items:center; border-radius:12px; color:var(--ink); background:var(--accent); font-weight:800; }
 .grid-mark { width:23px; height:23px; display:grid; grid-template-columns:repeat(3, 1fr); gap:2px; }
 .grid-mark i { display:block; border-radius:2px; background:var(--ink); }
-.grid-mark i:nth-child(1), .grid-mark i:nth-child(5), .grid-mark i:nth-child(9) { background:var(--accent); }
-.grid-mark i:nth-child(2), .grid-mark i:nth-child(6) { background:var(--yellow); }
-.grid-mark i:nth-child(3), .grid-mark i:nth-child(7) { background:var(--sky); }
+.grid-mark i:nth-child(2), .grid-mark i:nth-child(6) { opacity:.55; }
+.grid-mark i:nth-child(3), .grid-mark i:nth-child(7) { opacity:.25; }
 .brand-row { height:76px; padding:0 24px; display:flex; align-items:center; justify-content:space-between; }
 .brand { display:flex; align-items:center; gap:10px; font-size:19px; letter-spacing:-.06em; }
 .connect-content { padding:28px 22px 22px; }
@@ -39,7 +38,7 @@ h1 { margin:16px 0 13px; font-size:44px; line-height:1.04; letter-spacing:-.08em
 .primary b { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:14px; }
 .primary span { width:32px; height:32px; display:grid; place-items:center; flex:none; border-radius:50%; color:var(--ink); background:var(--accent); font-size:19px; }
 .primary:disabled { opacity:.55; }
-.install-tip { margin-top:28px; padding:18px; border:1px solid var(--line); border-radius:22px; background:#fffaf8; }
+.install-tip { margin-top:28px; padding:18px; border:1px solid var(--line); border-radius:22px; background:#fff; }
 .tip-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
 .tip-heading small { color:var(--orange); font-size:10px; font-weight:800; letter-spacing:.12em; }
 .tip-heading h2 { margin:5px 0 4px; font-size:18px; letter-spacing:-.05em; }
@@ -47,24 +46,24 @@ h1 { margin:16px 0 13px; font-size:44px; line-height:1.04; letter-spacing:-.08em
 .tip-heading > b { flex:none; color:var(--muted); font-size:10px; letter-spacing:.08em; }
 .tip-slider { overflow:hidden; margin-top:16px; border-radius:16px; touch-action:pan-y; }
 .tip-slide { min-height:148px; display:grid; grid-template-columns:minmax(0, 1fr) 128px; gap:12px; padding:14px; animation:tip-enter .35s ease both; }
-.tip-ios { background:#f8e9ef; }
-.tip-android { background:#eaf1e7; }
-.tip-done { background:#e9e9f4; }
+.tip-ios { background:#f1f1ef; }
+.tip-android { background:#ebebe9; }
+.tip-done { background:#e5e5e3; }
 .tip-copy { display:flex; min-width:0; flex-direction:column; justify-content:center; }
 .tip-copy small { margin-bottom:7px; color:var(--muted); font-size:10px; font-weight:700; }
 .tip-copy strong { font-size:14px; line-height:1.3; letter-spacing:-.04em; }
 .tip-copy p { margin:7px 0 0; color:var(--muted); font-size:11px; line-height:1.45; }
-.tip-visual { position:relative; min-height:120px; overflow:hidden; padding:9px; border:1px solid #ffffffaa; border-radius:13px; background:#fffdfb; box-shadow:0 5px 12px #2423360d; }
+.tip-visual { position:relative; min-height:120px; overflow:hidden; padding:9px; border:1px solid #ffffffaa; border-radius:13px; background:#fff; box-shadow:0 5px 12px #1717170d; }
 .tip-device-bar { display:flex; align-items:center; justify-content:space-between; color:var(--muted); font-size:8px; font-weight:700; }
 .tip-device-bar i { width:5px; height:5px; display:block; border-radius:50%; background:var(--line); }
 .tip-screen-lines { display:grid; gap:6px; margin-top:18px; }
 .tip-screen-lines i { display:block; height:6px; border-radius:4px; background:#ebe7e4; }
-.tip-screen-lines i:nth-child(2) { width:75%; background:#f1d6df; }
+.tip-screen-lines i:nth-child(2) { width:75%; background:#d6d6d4; }
 .tip-screen-lines i:nth-child(3) { width:55%; }
 .tip-share { position:absolute; right:11px; bottom:14px; width:27px; height:27px; display:grid; place-items:center; border-radius:50%; color:var(--ink); background:var(--accent); font-size:18px; font-weight:500; }
-.tip-menu-item { position:absolute; right:8px; bottom:13px; left:8px; display:flex; align-items:center; gap:5px; padding:7px 6px; border-radius:7px; color:var(--ink); background:#fff; font-size:8px; font-weight:700; box-shadow:0 2px 8px #24233612; }
+.tip-menu-item { position:absolute; right:8px; bottom:13px; left:8px; display:flex; align-items:center; gap:5px; padding:7px 6px; border-radius:7px; color:var(--ink); background:#fff; font-size:8px; font-weight:700; box-shadow:0 2px 8px #17171712; }
 .tip-menu-item span { width:14px; height:14px; display:grid; place-items:center; border-radius:4px; color:#fff; background:var(--ink); font-size:11px; line-height:1; }
-.tip-app-icon { position:absolute; top:30px; right:27px; display:grid; width:51px; height:51px; place-items:center; border-radius:15px; color:var(--ink); background:var(--accent); font-size:23px; font-weight:800; box-shadow:0 7px 14px #24233618; }
+.tip-app-icon { position:absolute; top:30px; right:27px; display:grid; width:51px; height:51px; place-items:center; border-radius:15px; color:var(--ink); background:var(--accent); font-size:23px; font-weight:800; box-shadow:0 7px 14px #17171718; }
 .tip-app-icon small { position:absolute; top:57px; color:var(--ink); font-size:8px; font-weight:700; }
 .tip-footer { display:flex; align-items:center; justify-content:space-between; margin-top:12px; }
 .tip-footer > span { color:var(--muted); font-size:10px; }
