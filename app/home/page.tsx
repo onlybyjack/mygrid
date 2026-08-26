@@ -109,6 +109,7 @@ export default function Page() {
   const [dragOverPostId, setDragOverPostId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [activeTip, setActiveTip] = useState(0);
+  const draftsRef = useRef<Post[]>([]);
   const tipStartX = useRef<number | null>(null);
   const longPressTimer = useRef<number | null>(null);
   const suppressTileClick = useRef(false);
@@ -158,6 +159,7 @@ export default function Page() {
   }, [selectedPost]);
 
   const allPosts = drafts;
+  draftsRef.current = drafts;
 
   function saveIdentity(nextUsername: string) {
     localStorage.setItem(IDENTITY_KEY, JSON.stringify({ username: nextUsername }));
@@ -260,15 +262,7 @@ export default function Page() {
         document.removeEventListener("touchend", handleUp);
         try { tile.releasePointerCapture(pointerId); } catch { /* Pointer capture is already released. */ }
         const target = document.elementFromPoint(point.clientX, point.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
-        const from = drafts.findIndex((post) => post.id === postId);
-        const to = drafts.findIndex((post) => post.id === target);
-        if (target && target !== postId && from >= 0 && to >= 0) {
-          const next = [...drafts];
-          const [moved] = next.splice(from, 1);
-          next.splice(to, 0, moved);
-          setDrafts(next);
-          void saveDraftPhotos(next).catch(() => undefined);
-        }
+        if (target && target !== postId) reorderPosts(postId, target);
         setDraggedPostId(null);
         setDragOverPostId(null);
         window.setTimeout(() => { suppressTileClick.current = false; }, 0);
@@ -282,11 +276,25 @@ export default function Page() {
     }, 450);
   }
 
+  function reorderPosts(postId: string, targetId: string) {
+    const current = draftsRef.current;
+    const from = current.findIndex((post) => post.id === postId);
+    const to = current.findIndex((post) => post.id === targetId);
+    if (from < 0 || to < 0 || from === to) return;
+    const next = [...current];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    draftsRef.current = next;
+    setDrafts(next);
+    void saveDraftPhotos(next).catch(() => undefined);
+  }
+
   function moveTile(event: React.PointerEvent<HTMLElement>) {
     if (!draggedPostId) return;
     event.preventDefault();
     const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
     setDragOverPostId(target || null);
+    if (target && target !== draggedPostId && target !== dragOverPostId) reorderPosts(draggedPostId, target);
   }
 
   function moveTileTouch(event: React.TouchEvent<HTMLButtonElement>) {
@@ -295,6 +303,7 @@ export default function Page() {
     const point = event.touches[0];
     const target = point && document.elementFromPoint(point.clientX, point.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
     setDragOverPostId(target || null);
+    if (target && target !== draggedPostId && target !== dragOverPostId) reorderPosts(draggedPostId, target);
   }
 
   function finishTileTouch(event: React.TouchEvent<HTMLButtonElement>) {
@@ -307,17 +316,9 @@ export default function Page() {
     if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current);
     longPressTimer.current = null;
     if (!draggedPostId) return;
-    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
+    const target = dragOverPostId || document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
     if (target && target !== draggedPostId) {
-      const from = drafts.findIndex((post) => post.id === draggedPostId);
-      const to = drafts.findIndex((post) => post.id === target);
-      if (from >= 0 && to >= 0) {
-        const next = [...drafts];
-        const [moved] = next.splice(from, 1);
-        next.splice(to, 0, moved);
-        setDrafts(next);
-        void saveDraftPhotos(next).catch(() => undefined);
-      }
+      if (target && target !== draggedPostId) reorderPosts(draggedPostId, target);
     }
     setDraggedPostId(null);
     setDragOverPostId(null);
