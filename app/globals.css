@@ -31,9 +31,8 @@ button { cursor:pointer; }
 .onboarding-input input::placeholder { color:#a8a8a6; }
 .onboarding-back { position:absolute; top:18px; left:20px; width:40px; height:40px; display:grid; place-items:center; padding:0; border:0; color:var(--ink); background:transparent; }
 .onboarding-back-icon { width:25px; height:25px; fill:none; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:2.3; }
-.onboarding-primary { position:relative; width:100%; height:58px; display:flex; align-items:center; justify-content:center; margin-top:14px; padding:0 60px 0 19px; border:0; border-radius:30px; color:#fff; background:var(--ink); }
+.onboarding-primary { width:100%; height:58px; display:flex; align-items:center; justify-content:center; margin-top:14px; padding:0; border:0; border-radius:30px; color:#fff; background:var(--ink); }
 .onboarding-primary b { font-size:15px; }
-.onboarding-primary span { position:absolute; right:12px; width:38px; height:38px; display:grid; place-items:center; border-radius:50%; color:var(--ink); background:var(--accent); font-size:20px; }
 .onboarding-text-button { display:block; margin:13px auto 0; padding:5px 10px; border:0; color:var(--muted); background:transparent; font-size:11px; }
 .onboarding-text-button:hover { color:var(--ink); }
 .onboarding-secondary-actions { display:flex; justify-content:center; }
