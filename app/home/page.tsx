@@ -239,6 +239,33 @@ export default function Page() {
     longPressTimer.current = window.setTimeout(() => {
       setDraggedPostId(postId);
       suppressTileClick.current = true;
+      const handleMove = (moveEvent: PointerEvent) => {
+        if (moveEvent.pointerId !== event.pointerId) return;
+        moveEvent.preventDefault();
+        const target = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
+        setDragOverPostId(target || null);
+      };
+      const handleUp = (upEvent: PointerEvent) => {
+        if (upEvent.pointerId !== event.pointerId) return;
+        document.removeEventListener("pointermove", handleMove);
+        document.removeEventListener("pointercancel", handleUp);
+        const target = document.elementFromPoint(upEvent.clientX, upEvent.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
+        const from = drafts.findIndex((post) => post.id === postId);
+        const to = drafts.findIndex((post) => post.id === target);
+        if (target && target !== postId && from >= 0 && to >= 0) {
+          const next = [...drafts];
+          const [moved] = next.splice(from, 1);
+          next.splice(to, 0, moved);
+          setDrafts(next);
+          void saveDraftPhotos(next).catch(() => undefined);
+        }
+        setDraggedPostId(null);
+        setDragOverPostId(null);
+        window.setTimeout(() => { suppressTileClick.current = false; }, 0);
+      };
+      document.addEventListener("pointermove", handleMove, { passive: false });
+      document.addEventListener("pointerup", handleUp, { once: true });
+      document.addEventListener("pointercancel", handleUp, { once: true });
     }, 450);
   }
 
