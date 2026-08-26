@@ -184,7 +184,7 @@ export default function Page() {
       <header className="brand-row"><div className="brand"><div className="logo">M</div><strong>mygrid</strong></div></header>
       <section className="connect-content">
         <h1>내 피드를<br />1초 만에 가져오세요.</h1>
-        <p className="lead">이제 마이그리드에서 감성 있게 피드를 꾸며보세요.</p>
+        <p className="lead">Instagram 아이디만 입력하면, 나만의 피드가 시작돼요.<br />이제 마이그리드에서 감성 있게 피드를 꾸며보세요.</p>
         <form className="connect-card" onSubmit={connect}>
           <h2>Instagram 프로필 불러오기</h2>
           <div className="input-row"><span>@</span><input id="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="아이디 입력" autoCapitalize="none" autoCorrect="off" /></div>
