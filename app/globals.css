@@ -121,9 +121,8 @@ h1 span { white-space:nowrap; }
 .profile-add-button { width:32px; height:32px; display:grid; place-items:center; justify-self:start; color:var(--ink); font-size:31px; font-weight:300; line-height:1; cursor:pointer; }
 .profile-add-button input { display:none; }
 .profile-identity { display:flex; align-items:baseline; justify-self:center; gap:7px; }
-.profile-username, .profile-edit-button { min-height:32px; padding:0; border:0; color:var(--ink); background:transparent; font:inherit; }
+.profile-username { min-height:32px; padding:0; border:0; color:var(--ink); background:transparent; font:inherit; }
 .profile-username { font-size:16px; font-weight:700; }
-.profile-edit-button { color:var(--muted); font-size:11px; text-decoration:underline; text-underline-offset:3px; }
 .profile-scroll { flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
 .profile-summary { display:flex; align-items:center; justify-content:space-between; padding:18px 18px 0; }
 .avatar { width:82px; height:82px; display:grid; place-items:center; overflow:hidden; border:1px solid var(--line); border-radius:50%; color:#8a929c; background:#eef0f3; font-size:38px; }
