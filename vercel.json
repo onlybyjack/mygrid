@@ -2,5 +2,11 @@
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "cleanUrls": true,
-  "regions": ["icn1"]
+  "regions": ["icn1"],
+  "functions": {
+    "app/api/profile/route.ts": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  }
 }

@@ -109,6 +109,8 @@ async function readBrowserProfile(username: string) {
     await page.setUserAgent("Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 Version/18.5 Mobile/15E148 Safari/604.1");
     await page.goto(`https://www.instagram.com/${encodeURIComponent(username)}/`, { waitUntil: "domcontentloaded", timeout: 20000 });
     await page.waitForNetworkIdle({ idleTime: 500, timeout: 10000 }).catch(() => undefined);
+    const embedded = parseHtmlProfile(await page.content(), username);
+    if (embedded.user) return embedded;
     const profile = await page.evaluate((requestedUsername) => {
       const imageUrl = (element: Element | null) => {
         if (!element) return "";
