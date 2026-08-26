@@ -133,7 +133,7 @@ h1 span { white-space:nowrap; }
 .profile-name { margin:11px 19px 0; font-size:14px; }
 .profile-tabs { height:57px; display:grid; margin-top:16px; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
 .profile-tab { display:grid; place-items:center; color:var(--muted); }
-.profile-tab .grid-mark { width:24px; height:24px; gap:2px; opacity:.5; }
+.profile-tab .grid-mark { width:24px; height:24px; gap:2px; opacity:.75; }
 .profile-tab .grid-mark i { display:block; background:var(--ink); }
 .profile-tab.selected { color:var(--ink); border-bottom:2px solid var(--ink); }
 .grid-row { display:flex; gap:2px; }
