@@ -24,7 +24,7 @@ button { cursor:pointer; }
 .onboarding-copy h1 { margin:17px 0 17px; font-size:clamp(34px, 9vw, 54px); line-height:1.08; letter-spacing:-.1em; }
 .onboarding-copy p { margin:0; color:var(--muted); font-size:14px; line-height:1.6; }
 .onboarding-bottom { margin-top:auto; }
-.onboarding-identity .onboarding-bottom { margin-top:clamp(50px, 8vh, 86px); }
+.onboarding-identity .onboarding-bottom { margin-top:clamp(24px, 4vh, 40px); }
 .onboarding-input-label { display:block; margin-bottom:8px; color:var(--muted); font-size:11px; }
 .onboarding-input-label em { margin-left:5px; color:#a8a8a6; font-size:9px; font-style:normal; }
 .onboarding-input { min-height:56px; display:flex; align-items:center; border:1px solid var(--line); border-radius:15px; background:var(--panel); }
