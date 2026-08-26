@@ -236,7 +236,7 @@ export default function Page() {
         <section className="connect-card upload-card" onPaste={pasteGridScreenshot} tabIndex={0}>
           <h2>피드를 가져오는 방법</h2>
           {message && <div className="error" role="alert">{message}</div>}
-          <label className="upload-option upload-option-featured"><span className="upload-option-mark"><GridMark /></span><span className="upload-option-copy"><b>인스타 프로필 캡처</b><small>한 장 올리면 자동으로 나눠요.</small></span><span className="upload-option-arrow">↑</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label>
+          <label className="upload-option upload-option-featured"><span className="upload-option-mark"><GridMark uniform /></span><span className="upload-option-copy"><b>인스타 프로필 캡처</b><small>한 장 올리면 자동으로 나눠요.</small></span><span className="upload-option-arrow">↑</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label>
           <label className="upload-option"><span className="upload-option-mark">＋</span><span className="upload-option-copy"><b>사진 직접 올리기</b><small>첫 장 이미지를 여러 장 선택해요.</small></span><span className="upload-option-arrow">↑</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={choosePhotos} /></label>
         </section>
         <section className="install-tip" aria-label="홈 화면에 추가하는 방법">

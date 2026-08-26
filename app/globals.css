@@ -16,6 +16,8 @@ button { cursor:pointer; }
 .logo { width:38px; height:38px; display:grid; place-items:center; border-radius:10px; color:var(--accent); background:var(--ink); font-weight:800; }
 .grid-mark { width:24px; height:24px; display:grid; grid-template-columns:repeat(3, 1fr); gap:2px; }
 .grid-mark i { display:block; background:var(--accent); }
+.grid-mark:not(.grid-mark-uniform) i:nth-child(2n) { opacity:.8; }
+.grid-mark:not(.grid-mark-uniform) i:nth-child(3n) { opacity:.6; }
 .brand-row { height:76px; padding:0 24px; display:flex; align-items:center; justify-content:space-between; }
 .brand { display:flex; align-items:center; gap:10px; font-size:19px; letter-spacing:-.06em; }
 .connect-content { padding:28px 22px 22px; }
