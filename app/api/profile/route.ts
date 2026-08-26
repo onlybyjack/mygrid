@@ -91,21 +91,6 @@ async function readHtmlProfile(username: string) {
   return parseHtmlProfile(await response.text(), username);
 }
 
-async function readScraperApiProfile(username: string) {
-  const key = process.env.SCRAPER_API_KEY?.trim();
-  if (!key) return { user: null, found: false };
-  const target = `https://www.instagram.com/${encodeURIComponent(username)}/`;
-  const params = new URLSearchParams({ api_key: key, url: target, render: "true", premium: "true", country_code: "kr", device_type: "mobile" });
-  const response = await fetch(`https://api.scraperapi.com/?${params}`, { cache: "no-store" });
-  if (!response.ok) {
-    console.error(`ScraperAPI request failed with status ${response.status}`);
-    return { user: null, found: false };
-  }
-  const result = parseHtmlProfile(await response.text(), username);
-  if (!result.user) console.error("ScraperAPI returned no Instagram profile payload");
-  return result;
-}
-
 export async function GET(request: Request) {
   const username = new URL(request.url).searchParams.get("username")?.trim().replace(/^@/, "") || "";
   if (!USERNAME_PATTERN.test(username)) {
@@ -114,12 +99,6 @@ export async function GET(request: Request) {
 
   try {
     let user: InstagramUser | null = null;
-    try {
-      const scraper = await readScraperApiProfile(username);
-      user = scraper.user;
-    } catch {
-      // A provider outage must not prevent the direct fallbacks below.
-    }
     for (const host of ["www.instagram.com", "i.instagram.com"]) {
       if (user) break;
       try {
