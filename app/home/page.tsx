@@ -108,7 +108,10 @@ async function splitGridScreenshot(file: File): Promise<File[]> {
       if (rows < 1) continue;
       let horizontal = rowContrast(top);
       for (let row = 1; row < rows; row += 1) horizontal += rowContrast(top + row * candidateHeight);
-      const score = verticalGapContrast(top, candidateHeight) * 0.7 + (horizontal / rows) * 0.3;
+      // Reward candidates with several repeated row boundaries. Averaging by
+      // the number of visible rows made a late single boundary score higher
+      // than the actual start of the grid on pale screenshots.
+      const score = verticalGapContrast(top, candidateHeight) * 0.5 + (horizontal / 4) * 0.5;
       if (score > best.score) best = { top, score };
     }
     return { ...best, tileHeight: candidateHeight };
