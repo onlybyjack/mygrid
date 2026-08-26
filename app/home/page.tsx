@@ -230,7 +230,7 @@ export default function Page() {
                 <div className="tip-device-bar"><i /> <span>{tip.kind === "ios" ? "Safari" : tip.kind === "android" ? "Chrome" : "mygrid"}</span><i /></div>
                 {tip.kind === "ios" && <><div className="tip-screen-lines"><i /><i /><i /></div><div className="tip-share">↑</div></>}
                 {tip.kind === "android" && <><div className="tip-screen-lines"><i /><i /><i /></div><div className="tip-menu-item"><span>＋</span> 홈 화면에 추가</div></>}
-                {tip.kind === "done" && <div className="tip-app-icon">M<small>mygrid</small></div>}
+                {tip.kind === "done" && <div className="tip-app-icon"><GridMark /><small>mygrid</small></div>}
               </div>
             </article>; })()}
           </div>
