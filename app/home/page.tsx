@@ -161,6 +161,10 @@ function TrashIcon() {
   return <svg className="viewer-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-9 0 1 13h10l1-13M10 11v5m4-5v5" /></svg>;
 }
 
+function BackIcon() {
+  return <svg className="onboarding-back-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7" /></svg>;
+}
+
 export default function Page() {
   const [preview, setPreview] = useState(false);
   const [homeStep, setHomeStep] = useState<1 | 2>(1);
@@ -641,13 +645,14 @@ export default function Page() {
     return <main className="onboarding-page" onPaste={homeStep === 2 ? pasteGridScreenshot : undefined}>
       <header className="onboarding-header"><div className="brand"><div className="logo"><GridMark /></div><strong>mygrid</strong></div><span>{String(homeStep).padStart(2, "0")} / 02</span></header>
       {homeStep === 1 ? <section className="onboarding-screen onboarding-identity" aria-labelledby="identity-title">
-        <div className="onboarding-copy"><small>WELCOME TO MYGRID</small><h1 id="identity-title">인스타 아이디를<br />알려주세요.</h1><p>피드 상단에 표시할 이름이에요.<br />나중에 다시 바꿀 수 있어요.</p></div>
+        <div className="onboarding-copy"><small>01 / 02 · IDENTITY</small><h1 id="identity-title">인스타 아이디를<br />알려주세요.</h1><p>피드 상단에 표시할 이름이에요.<br />나중에 다시 바꿀 수 있어요.</p></div>
         <div className="onboarding-bottom"><label className="onboarding-input-label" htmlFor="onboarding-username">Instagram 아이디 <em>선택 입력</em></label><div className="onboarding-input"><b>@</b><input id="onboarding-username" value={username} onChange={(event) => updateUsername(event.target.value)} placeholder="아이디를 입력해 주세요" autoCapitalize="none" autoCorrect="off" /></div><button className="onboarding-primary" type="button" onClick={continueToScreenshot}><b>다음</b><span>→</span></button><button className="onboarding-text-button" type="button" onClick={continueToScreenshot}>건너뛰기</button></div>
       </section> : <section className="onboarding-screen onboarding-capture" aria-labelledby="capture-title">
+        <button className="onboarding-back" type="button" onClick={() => setHomeStep(1)} aria-label="이전 단계"><BackIcon /></button>
         <div className="onboarding-copy"><small>02 / 02 · PROFILE</small><h1 id="capture-title">프로필 화면을<br />캡처해 주세요.</h1><p>인스타 프로필 전체 화면을 올리면<br />사진을 자동으로 나눠드려요.</p></div>
         <div className="capture-guide" aria-label="인스타 프로필 캡처 예시"><div className="guide-phone"><div className="guide-status"><i /> Instagram <i /></div><div className="guide-profile"><span /><i /><i /><i /></div><div className="guide-grid">{Array.from({ length: 9 }, (_, index) => <i key={index} />)}</div><div className="guide-scan" /><div className="guide-finger" /></div></div>
         {message && <div className="error onboarding-error" role="alert">{message}</div>}
-        <div className="onboarding-bottom"><label className="onboarding-upload"><GridMark uniform /><span><b>캡처한 이미지 선택</b><small>프로필 캡처 한 장이면 충분해요.</small></span><strong>↑</strong><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label><button className="onboarding-primary" type="button" onClick={startEmptyProfile}><b>빈 피드로 바로 시작</b><span>→</span></button><div className="onboarding-secondary-actions"><button className="onboarding-text-button" type="button" onClick={() => setHomeStep(1)}>이전</button><button className="onboarding-text-button" type="button" onClick={startEmptyProfile}>건너뛰기</button></div></div>
+        <div className="onboarding-bottom"><label className="onboarding-upload"><GridMark uniform /><span><b>캡처한 이미지 선택</b><small>프로필 캡처 한 장이면 충분해요.</small></span><strong>↑</strong><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label><button className="onboarding-primary" type="button" onClick={startEmptyProfile}><b>빈 피드로 바로 시작</b><span>→</span></button><div className="onboarding-secondary-actions"><button className="onboarding-text-button" type="button" onClick={startEmptyProfile}>건너뛰기</button></div></div>
       </section>}
     </main>;
   }
