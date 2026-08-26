@@ -9,15 +9,15 @@ button { cursor:pointer; }
 .connect-page, .preview-page { width:100%; max-width:620px; min-height:100dvh; margin:0 auto; background:var(--paper); }
 .splash-page { width:100%; min-height:100dvh; display:grid; place-content:center; justify-items:center; gap:12px; color:var(--ink); background:var(--accent); }
 .splash-logo { width:64px; height:64px; display:grid; place-items:center; border-radius:50%; color:var(--accent); background:var(--ink); font-size:28px; font-weight:800; animation:splash-pop .7s ease both; }
-.splash-logo .grid-mark { width:34px; height:34px; gap:3px; }
+.splash-logo .grid-mark { width:36px; height:36px; gap:3px; }
 .splash-page strong { font-size:22px; letter-spacing:-.06em; animation:splash-fade .7s ease both; }
 @keyframes splash-pop { from { opacity:0; transform:scale(.8); } to { opacity:1; transform:scale(1); } }
 @keyframes splash-fade { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
-.logo { width:40px; height:40px; display:grid; place-items:center; border-radius:12px; color:var(--ink); background:var(--accent); font-weight:800; }
-.grid-mark { width:23px; height:23px; display:grid; grid-template-columns:repeat(3, 1fr); gap:2px; }
-.grid-mark i { display:block; border-radius:2px; background:var(--ink); }
-.grid-mark i:nth-child(2), .grid-mark i:nth-child(6) { opacity:.55; }
-.grid-mark i:nth-child(3), .grid-mark i:nth-child(7) { opacity:.25; }
+.logo { width:38px; height:38px; display:grid; place-items:center; border-radius:10px; color:var(--accent); background:var(--ink); font-weight:800; }
+.grid-mark { width:24px; height:24px; display:grid; grid-template-columns:repeat(3, 1fr); gap:2px; }
+.grid-mark i { display:block; background:var(--accent); }
+.grid-mark i:nth-child(2n) { opacity:.8; }
+.grid-mark i:nth-child(3n) { opacity:.6; }
 .brand-row { height:76px; padding:0 24px; display:flex; align-items:center; justify-content:space-between; }
 .brand { display:flex; align-items:center; gap:10px; font-size:19px; letter-spacing:-.06em; }
 .connect-content { padding:28px 22px 22px; }
