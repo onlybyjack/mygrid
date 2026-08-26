@@ -21,67 +21,67 @@ async function splitGridScreenshot(file: File): Promise<File[]> {
   const bitmap = await createImageBitmap(file);
   const width = bitmap.width;
   const height = bitmap.height;
-  const margin = Math.round(width * 0.025);
-  const tileWidth = Math.floor((width - margin * 2) / 3);
-  const tileHeight = Math.round(tileWidth * 1.3333);
+  const tileWidth = Math.floor(width / 3);
   const output: File[] = [];
   const source = document.createElement("canvas");
   source.width = width;
   source.height = height;
   const sourceContext = source.getContext("2d");
-  const canvas = document.createElement("canvas");
-  canvas.width = tileWidth;
-  canvas.height = tileHeight;
-  const context = canvas.getContext("2d");
-  if (!sourceContext || !context || tileWidth < 40) {
+  if (!sourceContext || tileWidth < 40) {
     bitmap.close();
     return [];
   }
   sourceContext.drawImage(bitmap, 0, 0);
   const sourcePixels = sourceContext.getImageData(0, 0, width, height).data;
-  const rowVariance = (row: number) => {
-    let total = 0;
-    let squared = 0;
+  const expectedHeight = tileWidth * 1.3333;
+  const rowActivity = (row: number, column: number) => {
+    let active = 0;
     let samples = 0;
-    for (let x = margin; x < width - margin; x += 8) {
+    const left = column * tileWidth;
+    const right = column === 2 ? width : left + tileWidth;
+    for (let x = left + 4; x < right - 4; x += 8) {
       const index = (row * width + x) * 4;
-      const luminance = sourcePixels[index] * 0.299 + sourcePixels[index + 1] * 0.587 + sourcePixels[index + 2] * 0.114;
-      total += luminance;
-      squared += luminance * luminance;
+      const red = sourcePixels[index];
+      const green = sourcePixels[index + 1];
+      const blue = sourcePixels[index + 2];
+      const luminance = red * 0.299 + green * 0.587 + blue * 0.114;
+      if (luminance < 242 || Math.max(red, green, blue) - Math.min(red, green, blue) > 18) active += 1;
       samples += 1;
     }
-    const average = total / samples;
-    return squared / samples - average * average;
+    return active / samples > 0.12;
   };
-  const findActiveEdge = (start: number, step: number) => {
-    let streak = 0;
-    let edge = start;
-    for (let row = start; row >= 0 && row < height; row += step) {
-      if (rowVariance(row) > 180) {
-        if (!streak) edge = row;
-        streak += 1;
-        if (streak >= 8) return edge;
-      } else streak = 0;
-    }
-    return step > 0 ? Math.round(height * 0.08) : height;
-  };
-  const top = findActiveEdge(0, 1);
-  const bottom = findActiveEdge(height - 1, -1);
-  const rows = Math.floor((bottom - top) / tileHeight);
-  if (rows < 1) {
-    bitmap.close();
-    return [];
-  }
-  for (let row = 0; row < rows; row += 1) {
-    for (let column = 0; column < 3; column += 1) {
-      context.clearRect(0, 0, tileWidth, tileHeight);
-      context.drawImage(bitmap, margin + column * tileWidth, top + row * tileHeight, tileWidth, tileHeight, 0, 0, tileWidth, tileHeight);
-      const pixels = context.getImageData(0, 0, tileWidth, tileHeight).data;
-      let visible = 0;
-      for (let index = 0; index < pixels.length; index += 16) {
-        if (pixels[index] < 242 || pixels[index + 1] < 242 || pixels[index + 2] < 242) visible += 1;
+  const segments: Array<{ column: number; top: number; height: number }> = [];
+  for (let column = 0; column < 3; column += 1) {
+    let start = -1;
+    let blankRows = 0;
+    for (let row = 0; row <= height; row += 1) {
+      const active = row < height && rowActivity(row, column);
+      if (active) {
+        if (start < 0) start = row;
+        blankRows = 0;
+      } else if (start >= 0) {
+        blankRows += 1;
+        if (blankRows >= 10 || row === height) {
+          const end = row - blankRows;
+          if (end - start > 60) segments.push({ column, top: start, height: end - start });
+          start = -1;
+          blankRows = 0;
+        }
       }
-      if (visible / (pixels.length / 16) < 0.08) continue;
+    }
+  }
+  segments.sort((a, b) => a.top - b.top || a.column - b.column);
+  for (const segment of segments) {
+    const pieces = Math.max(1, Math.round(segment.height / expectedHeight));
+    for (let piece = 0; piece < pieces; piece += 1) {
+      const pieceTop = segment.top + (segment.height * piece) / pieces;
+      const pieceHeight = segment.height / pieces;
+      const canvas = document.createElement("canvas");
+      canvas.width = tileWidth;
+      canvas.height = Math.round(pieceHeight);
+      const context = canvas.getContext("2d");
+      if (!context) continue;
+      context.drawImage(bitmap, segment.column * tileWidth, pieceTop, tileWidth, pieceHeight, 0, 0, tileWidth, Math.round(pieceHeight));
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
       if (blob) output.push(new File([blob], `grid-${output.length + 1}.jpg`, { type: "image/jpeg" }));
     }
