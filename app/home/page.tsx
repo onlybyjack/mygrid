@@ -5,7 +5,6 @@ import { deleteDraftPhoto, readDraftPhotos, saveDraftPhotos } from "../../lib/in
 import GridMark from "../components/grid-mark";
 
 type Post = { id: string; image: string; draft?: boolean };
-type CropAspect = "portrait" | "square" | "landscape";
 const IDENTITY_KEY = "mygrid:identity";
 
 const INSTALL_TIPS = [
@@ -138,10 +137,10 @@ export default function Page() {
   const [activeTip, setActiveTip] = useState(0);
   const [editorFiles, setEditorFiles] = useState<File[]>([]);
   const [editorIndex, setEditorIndex] = useState(0);
-  const [editorAspect, setEditorAspect] = useState<CropAspect>("portrait");
   const [editorZoom, setEditorZoom] = useState(1);
   const [editorOffsetX, setEditorOffsetX] = useState(0);
   const [editorOffsetY, setEditorOffsetY] = useState(0);
+  const [editorImageSize, setEditorImageSize] = useState<{ width: number; height: number } | null>(null);
   const [editorPreviewUrl, setEditorPreviewUrl] = useState("");
   const editedFilesRef = useRef<File[]>([]);
   const editorPointers = useRef(new Map<number, { x: number; y: number }>());
@@ -212,10 +211,10 @@ export default function Page() {
     editedFilesRef.current = [];
     setEditorFiles(files);
     setEditorIndex(0);
-    setEditorAspect("portrait");
     setEditorZoom(1);
     setEditorOffsetX(0);
     setEditorOffsetY(0);
+    setEditorImageSize(null);
   }
 
   useEffect(() => {
@@ -228,20 +227,22 @@ export default function Page() {
 
   async function cropPhoto(file: File): Promise<File> {
     const bitmap = await createImageBitmap(file);
-    const aspect = editorAspect === "square" ? 1 : editorAspect === "landscape" ? 4 / 3 : 3 / 4;
-    const sourceAspect = bitmap.width / bitmap.height;
-    const cropWidth = sourceAspect > aspect ? bitmap.height * aspect / editorZoom : bitmap.width / editorZoom;
-    const cropHeight = cropWidth / aspect;
-    const maxX = (bitmap.width - cropWidth) / 2;
-    const maxY = (bitmap.height - cropHeight) / 2;
-    const sourceX = Math.max(0, Math.min(bitmap.width - cropWidth, (bitmap.width - cropWidth) / 2 + editorOffsetX * maxX));
-    const sourceY = Math.max(0, Math.min(bitmap.height - cropHeight, (bitmap.height - cropHeight) / 2 + editorOffsetY * maxY));
     const outputWidth = 1200;
-    const outputHeight = Math.round(outputWidth / aspect);
+    const outputHeight = 1600;
     const canvas = document.createElement("canvas");
     canvas.width = outputWidth;
     canvas.height = outputHeight;
-    canvas.getContext("2d")?.drawImage(bitmap, sourceX, sourceY, cropWidth, cropHeight, 0, 0, outputWidth, outputHeight);
+    const context = canvas.getContext("2d");
+    if (context) {
+      context.fillStyle = "#fff";
+      context.fillRect(0, 0, outputWidth, outputHeight);
+      const fitScale = Math.min(outputWidth / bitmap.width, outputHeight / bitmap.height);
+      const imageWidth = bitmap.width * fitScale * editorZoom;
+      const imageHeight = bitmap.height * fitScale * editorZoom;
+      const offsetX = editorOffsetX * outputWidth;
+      const offsetY = editorOffsetY * outputHeight;
+      context.drawImage(bitmap, (outputWidth - imageWidth) / 2 + offsetX, (outputHeight - imageHeight) / 2 + offsetY, imageWidth, imageHeight);
+    }
     bitmap.close();
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
     return blob ? new File([blob], `edited-${Date.now()}.jpg`, { type: "image/jpeg" }) : file;
@@ -269,9 +270,26 @@ export default function Page() {
     setPreview(true);
   }
 
-  function clampEditorOffset(value: number) {
-    return Math.max(-1, Math.min(1, value));
+  function editorPanBounds(zoom = editorZoom) {
+    if (!editorImageSize) return { x: 1, y: 1 };
+    const fitScale = Math.min(1200 / editorImageSize.width, 1600 / editorImageSize.height);
+    const scaledWidth = editorImageSize.width * fitScale * zoom;
+    const scaledHeight = editorImageSize.height * fitScale * zoom;
+    return {
+      x: Math.max(0, (scaledWidth - 1200) / 2400),
+      y: Math.max(0, (scaledHeight - 1600) / 3200),
+    };
   }
+
+  function clampEditorOffset(value: number, limit: number) {
+    return Math.max(-limit, Math.min(limit, value));
+  }
+
+  useEffect(() => {
+    const bounds = editorPanBounds();
+    setEditorOffsetX((offset) => clampEditorOffset(offset, bounds.x));
+    setEditorOffsetY((offset) => clampEditorOffset(offset, bounds.y));
+  }, [editorImageSize, editorZoom]);
 
   function editorPointerDown(event: React.PointerEvent<HTMLDivElement>) {
     event.preventDefault();
@@ -292,8 +310,9 @@ export default function Page() {
     const points = [...editorPointers.current.values()];
     if (points.length === 1) {
       const stage = event.currentTarget.getBoundingClientRect();
-      setEditorOffsetX(clampEditorOffset(editorGesture.current.baseX + (event.clientX - editorGesture.current.startX) / stage.width * 2));
-      setEditorOffsetY(clampEditorOffset(editorGesture.current.baseY + (event.clientY - editorGesture.current.startY) / stage.height * 2));
+      const bounds = editorPanBounds();
+      setEditorOffsetX(clampEditorOffset(editorGesture.current.baseX + (event.clientX - editorGesture.current.startX) / stage.width, bounds.x));
+      setEditorOffsetY(clampEditorOffset(editorGesture.current.baseY + (event.clientY - editorGesture.current.startY) / stage.height, bounds.y));
     } else if (points.length === 2 && editorGesture.current.distance > 0) {
       const distance = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y);
       setEditorZoom(Math.max(1, Math.min(2.5, editorGesture.current.zoom * distance / editorGesture.current.distance)));
@@ -535,9 +554,9 @@ export default function Page() {
     <main className="preview-page">
     <header className="profile-bar"><label className="profile-add-button" aria-label="다음 사진 추가">＋<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={choosePhotos} /></label><strong>@{username || "mygrid"}</strong><span aria-hidden="true" /></header>
     <section className="profile-scroll" onPointerMove={moveTile} onPointerUp={finishTilePress}>
-      <div className="profile-summary"><div className="avatar"><GridMark uniform /></div><div className="stat"><b>{allPosts.length}</b><small>게시물</small></div><div className="stat"><b>—</b><small>팔로워</small></div><div className="stat"><b>—</b><small>팔로잉</small></div></div>
+      <div className="profile-summary"><div className="avatar" /><div className="stat"><b>{allPosts.length}</b><small>게시물</small></div><div className="stat"><b>—</b><small>팔로워</small></div><div className="stat"><b>—</b><small>팔로잉</small></div></div>
       <h2 className="profile-name">{username || "mygrid"}</h2>
-      <div className="profile-tabs"><span className="selected"><GridMark uniform /></span></div>
+      <div className="profile-tabs"><div className="profile-tab selected"><GridMark uniform /></div></div>
       {allPosts.length ? <div className="grid">{Array.from({ length: Math.ceil(allPosts.length / 3) }, (_, row) => <div className="grid-row" key={row}>{[0, 1, 2].map((column) => { const post = allPosts[row * 3 + column]; return post ? <button className={`tile${draggedPostId === post.id ? " is-dragging" : ""}${dragOverPostId === post.id ? " drop-target" : ""}`} type="button" key={post.id} data-post-id={post.id} onPointerDown={(event) => startTilePress(event, post.id)} onPointerMove={moveTile} onPointerUp={finishTilePress} onTouchMove={moveTileTouch} onTouchEnd={finishTileTouch} onContextMenu={(event) => event.preventDefault()} onDragStart={(event) => event.preventDefault()} onSelect={(event) => event.preventDefault()} onClick={() => openPost(post)} aria-label="길게 눌러 게시물 이동"><img src={mediaUrl(post.image)} alt="게시물" /></button> : <div className="tile placeholder" key={`empty-${row}-${column}`} />; })}</div>)}</div> : <div className="empty"><b>피드가 기다리고 있어요</b><small>사진을 추가해 나만의 그리드를 만들어 보세요.</small></div>}
     </section>
     </main>
@@ -548,6 +567,6 @@ export default function Page() {
         <button className="viewer-delete" type="button" onClick={() => removePost(selectedPost.id)} aria-label="게시물 삭제" title="게시물 삭제"><TrashIcon /></button>
       </div>
     </div>}
-    {editorFiles.length > 0 && editorPreviewUrl && <div className="photo-editor" role="dialog" aria-modal="true" aria-label="사진 편집"><div className="editor-panel"><div className="editor-heading"><button className="editor-close" type="button" aria-label="편집 취소" onClick={() => setEditorFiles([])}>×</button><span>{editorIndex + 1} / {editorFiles.length}</span></div><div className={`crop-stage crop-${editorAspect}`} onPointerDown={editorPointerDown} onPointerMove={editorPointerMove} onPointerUp={editorPointerUp} onPointerCancel={editorPointerUp} onWheel={editorWheel}><img src={editorPreviewUrl} alt="편집할 사진" style={{ transform: `scale(${editorZoom}) translate(${editorOffsetX * 12}%, ${editorOffsetY * 12}%)` }} /></div><p className="editor-hint">사진을 끌어 구도를 맞추고, 두 손가락으로 확대하세요.</p><div className="aspect-buttons"><button type="button" className={editorAspect === "portrait" ? "active" : ""} onClick={() => setEditorAspect("portrait")}>세로 3:4</button><button type="button" className={editorAspect === "square" ? "active" : ""} onClick={() => setEditorAspect("square")}>정사각형</button><button type="button" className={editorAspect === "landscape" ? "active" : ""} onClick={() => setEditorAspect("landscape")}>가로 4:3</button></div><button className="editor-confirm" type="button" onClick={() => void confirmCrop()}>{editorIndex + 1 < editorFiles.length ? "다음 →" : "추가 →"}</button></div></div>}
+    {editorFiles.length > 0 && editorPreviewUrl && <div className="photo-editor" role="dialog" aria-modal="true" aria-label="사진 편집"><div className="editor-panel"><div className="editor-heading"><button className="editor-close" type="button" aria-label="편집 취소" onClick={() => setEditorFiles([])}>×</button><span>{editorIndex + 1} / {editorFiles.length}</span></div><div className="crop-stage crop-portrait" onPointerDown={editorPointerDown} onPointerMove={editorPointerMove} onPointerUp={editorPointerUp} onPointerCancel={editorPointerUp} onWheel={editorWheel}><img src={editorPreviewUrl} alt="편집할 사진" onLoad={(event) => setEditorImageSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })} style={{ transform: `translate(${editorOffsetX * 100}%, ${editorOffsetY * 100}%) scale(${editorZoom})` }} /><div className="crop-grid" aria-hidden="true"><i /><i /><i /><i /></div></div><button className="editor-confirm" type="button" onClick={() => void confirmCrop()}>{editorIndex + 1 < editorFiles.length ? "다음 →" : "→"}</button></div></div>}
   </>;
 }
