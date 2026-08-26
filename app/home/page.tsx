@@ -659,7 +659,7 @@ export default function Page() {
       </section> : <section className="onboarding-screen onboarding-capture" aria-labelledby="capture-title">
         <button className="onboarding-back" type="button" onClick={() => setHomeStep(1)} aria-label="이전 단계"><BackIcon /></button>
         <div className="onboarding-progress" role="progressbar" aria-label="온보딩 진행률" aria-valuemin={1} aria-valuemax={2} aria-valuenow={homeStep}><i style={{ width: "100%" }} /></div>
-        <div className="onboarding-copy"><h1 id="capture-title">프로필 화면을<br />캡처해 주세요.</h1><p>인스타 프로필 전체 화면을 올리면<br />사진을 자동으로 나눠드려요.</p></div>
+        <div className="onboarding-copy"><h1 id="capture-title">프로필 화면을<br />캡처해 주세요.</h1><p>인스타 프로필 전체 화면을 올리면<br />기존 피드를 자동으로 채워드려요.</p></div>
         <div className="capture-guide" aria-label="인스타 프로필 캡처 예시"><div className="guide-phone"><div className="guide-status"><i /> Instagram <i /></div><div className="guide-profile"><span /><i /><i /><i /></div><div className="guide-grid">{Array.from({ length: 9 }, (_, index) => <i key={index} />)}</div><div className="guide-scan" /><div className="guide-finger" /></div></div>
         {message && <div className="error onboarding-error" role="alert">{message}</div>}
         <div className="onboarding-bottom"><label className="onboarding-upload"><GridMark uniform /><span><b>캡처한 이미지 선택</b><small>프로필 캡처 한 장이면 충분해요.</small></span><strong>↑</strong><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label><button className="onboarding-primary" type="button" onClick={startEmptyProfile}><b>빈 피드로 바로 시작</b></button><div className="onboarding-secondary-actions"><button className="onboarding-text-button" type="button" onClick={startEmptyProfile}>건너뛰기</button></div></div>
