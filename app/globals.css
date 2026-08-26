@@ -63,7 +63,7 @@ h1 { margin:16px 0 13px; font-size:44px; line-height:1.04; letter-spacing:-.08em
 .tip-share { position:absolute; right:11px; bottom:14px; width:27px; height:27px; display:grid; place-items:center; border-radius:50%; color:var(--ink); background:var(--accent); font-size:18px; font-weight:500; }
 .tip-menu-item { position:absolute; right:8px; bottom:13px; left:8px; display:flex; align-items:center; gap:5px; padding:7px 6px; border-radius:7px; color:var(--ink); background:#fff; font-size:8px; font-weight:700; box-shadow:0 2px 8px #17171712; }
 .tip-menu-item span { width:14px; height:14px; display:grid; place-items:center; border-radius:4px; color:#fff; background:var(--ink); font-size:11px; line-height:1; }
-.tip-app-icon { position:absolute; top:30px; right:27px; display:grid; width:51px; height:51px; place-items:center; border-radius:15px; color:var(--accent); background:var(--ink); font-size:23px; font-weight:800; box-shadow:0 7px 14px #17171718; }
+.tip-app-icon { position:absolute; top:30px; left:50%; display:grid; width:51px; height:51px; place-items:center; border-radius:15px; color:var(--accent); background:var(--ink); font-size:23px; font-weight:800; box-shadow:0 7px 14px #17171718; transform:translateX(-50%); }
 .tip-app-icon .grid-mark { width:27px; height:27px; gap:2px; }
 .tip-app-icon small { position:absolute; top:57px; color:var(--ink); font-size:8px; font-weight:700; }
 .tip-footer { display:flex; align-items:center; justify-content:space-between; margin-top:12px; }
