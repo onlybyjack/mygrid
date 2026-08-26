@@ -240,18 +240,21 @@ export default function Page() {
       setDraggedPostId(postId);
       suppressTileClick.current = true;
       const handleMove = (moveEvent: Event) => {
-        const point = moveEvent as MouseEvent;
+        const point = "touches" in moveEvent ? (moveEvent as unknown as TouchEvent).touches[0] : moveEvent as MouseEvent;
         if (point.clientX === undefined || point.clientY === undefined) return;
         moveEvent.preventDefault();
         const target = document.elementFromPoint(point.clientX, point.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
         setDragOverPostId(target || null);
       };
       const handleUp = (upEvent: Event) => {
-        const point = upEvent as MouseEvent;
+        const point = "changedTouches" in upEvent ? (upEvent as unknown as TouchEvent).changedTouches[0] : upEvent as MouseEvent;
+        if (!point) return;
         document.removeEventListener("pointermove", handleMove);
-        document.removeEventListener("pointercancel", handleUp);
+        document.removeEventListener("pointerup", handleUp);
         document.removeEventListener("mousemove", handleMove);
         document.removeEventListener("mouseup", handleUp);
+        document.removeEventListener("touchmove", handleMove);
+        document.removeEventListener("touchend", handleUp);
         const target = document.elementFromPoint(point.clientX, point.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
         const from = drafts.findIndex((post) => post.id === postId);
         const to = drafts.findIndex((post) => post.id === target);
@@ -268,9 +271,10 @@ export default function Page() {
       };
       document.addEventListener("pointermove", handleMove, { passive: false });
       document.addEventListener("pointerup", handleUp, { once: true });
-      document.addEventListener("pointercancel", handleUp, { once: true });
       document.addEventListener("mousemove", handleMove, { passive: false });
       document.addEventListener("mouseup", handleUp, { once: true });
+      document.addEventListener("touchmove", handleMove, { passive: false });
+      document.addEventListener("touchend", handleUp, { once: true });
     }, 450);
   }
 
