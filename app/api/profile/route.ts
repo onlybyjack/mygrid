@@ -95,7 +95,7 @@ async function readScraperApiProfile(username: string) {
   const key = process.env.SCRAPER_API_KEY;
   if (!key) return { user: null, found: false };
   const target = `https://www.instagram.com/${encodeURIComponent(username)}/`;
-  const response = await fetch(`https://api.scraperapi.com/?api_key=${encodeURIComponent(key)}&url=${encodeURIComponent(target)}&render=true&country_code=kr&device_type=mobile`, { cache: "no-store" });
+  const response = await fetch(`https://api.scraperapi.com/?api_key=${encodeURIComponent(key)}&url=${encodeURIComponent(target)}&render=true&premium=true&country_code=kr&device_type=mobile`, { cache: "no-store" });
   if (!response.ok) return { user: null, found: false };
   return parseHtmlProfile(await response.text(), username);
 }
