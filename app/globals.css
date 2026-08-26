@@ -126,7 +126,9 @@ h1 { margin:16px 0 13px; font-size:44px; line-height:1.04; letter-spacing:-.08em
 .profile-tabs span { flex:1; display:grid; place-items:center; color:var(--muted); font-size:27px; }
 .profile-tabs .selected { color:var(--ink); border-bottom:2px solid var(--ink); }
 .grid-row { display:flex; gap:2px; }
-.tile { position:relative; flex:1; aspect-ratio:3 / 4; overflow:hidden; padding:0; border:0; color:inherit; background:#ede9df; cursor:zoom-in; font:inherit; text-align:initial; }
+.tile { position:relative; flex:1; aspect-ratio:3 / 4; overflow:hidden; padding:0; border:0; color:inherit; background:#ede9df; cursor:grab; font:inherit; text-align:initial; touch-action:pan-y; user-select:none; transition:opacity .15s, transform .15s; }
+.tile.is-dragging { opacity:.45; transform:scale(.96); cursor:grabbing; }
+.tile.drop-target { outline:3px solid var(--ink); outline-offset:-3px; }
 .tile:focus-visible { outline:3px solid var(--accent); outline-offset:-3px; }
 .tile img { width:100%; height:100%; display:block; object-fit:cover; }
 .tile.placeholder { background:var(--paper); }

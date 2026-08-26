@@ -1,7 +1,7 @@
 import { strFromU8, unzipSync } from "fflate";
 
 export type ImportedMedia = { id: string; image: string; caption?: string; timestamp?: number };
-type StoredMedia = { id: string; blob: Blob; caption?: string; timestamp?: number };
+type StoredMedia = { id: string; blob: Blob; caption?: string; timestamp?: number; order?: number };
 
 type StoredProfile = { username: string; count: number; updatedAt: number };
 const DB_NAME = "mygrid-export";
@@ -73,7 +73,7 @@ function openDatabase() {
 
 export async function saveImportedProfile(username: string, posts: ImportedMedia[]) {
   const db = await openDatabase();
-  const stored = await Promise.all(posts.map(async (post): Promise<StoredMedia> => ({ id: post.id, blob: await fetch(post.image).then((response) => response.blob()), caption: post.caption, timestamp: post.timestamp })));
+  const stored = await Promise.all(posts.map(async (post, order): Promise<StoredMedia> => ({ id: post.id, blob: await fetch(post.image).then((response) => response.blob()), caption: post.caption, timestamp: post.timestamp, order })));
   await new Promise<void>((resolve, reject) => {
     const transaction = db.transaction(["profiles", "media"], "readwrite");
     transaction.objectStore("profiles").put({ username, count: stored.length, updatedAt: Date.now() } satisfies StoredProfile, "active");
@@ -90,18 +90,19 @@ export async function readImportedProfile(): Promise<{ username: string; posts: 
   if (!profile) { db.close(); return null; }
   const media = await request<Array<StoredMedia & { key: string }>>(db.transaction("media").objectStore("media").getAll());
   db.close();
-  return { username: profile.username, posts: media.filter((post) => post.key.startsWith("active:")).map((post) => ({ id: post.id, image: URL.createObjectURL(post.blob), caption: post.caption, timestamp: post.timestamp })) };
+  return { username: profile.username, posts: media.filter((post) => post.key.startsWith("active:")).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((post) => ({ id: post.id, image: URL.createObjectURL(post.blob), caption: post.caption, timestamp: post.timestamp })) };
 }
 
 export async function saveDraftPhotos(posts: ImportedMedia[]) {
   const db = await openDatabase();
   const mediaStore = db.transaction("media").objectStore("media");
   const current = await request<Array<StoredMedia & { key: string }>>(mediaStore.getAll());
-  const stored = await Promise.all(posts.map(async (post): Promise<StoredMedia> => ({
+  const stored = await Promise.all(posts.map(async (post, order): Promise<StoredMedia> => ({
     id: post.id,
     blob: await fetch(post.image).then((response) => response.blob()),
     caption: post.caption,
     timestamp: post.timestamp,
+    order,
   })));
   await new Promise<void>((resolve, reject) => {
     const transaction = db.transaction("media", "readwrite");
@@ -118,7 +119,7 @@ export async function readDraftPhotos(): Promise<ImportedMedia[]> {
   const db = await openDatabase();
   const media = await request<Array<StoredMedia & { key: string }>>(db.transaction("media").objectStore("media").getAll());
   db.close();
-  return media.filter((post) => post.key.startsWith("draft:")).map((post) => ({
+  return media.filter((post) => post.key.startsWith("draft:")).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((post) => ({
     id: post.id,
     image: URL.createObjectURL(post.blob),
     caption: post.caption,

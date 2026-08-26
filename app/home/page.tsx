@@ -105,9 +105,13 @@ export default function Page() {
   const [drafts, setDrafts] = useState<Post[]>([]);
   const [message, setMessage] = useState("");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [draggedPostId, setDraggedPostId] = useState<string | null>(null);
+  const [dragOverPostId, setDragOverPostId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [activeTip, setActiveTip] = useState(0);
   const tipStartX = useRef<number | null>(null);
+  const longPressTimer = useRef<number | null>(null);
+  const suppressTileClick = useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -177,7 +181,7 @@ export default function Page() {
       event.target.value = "";
       return;
     }
-    const nextDrafts = [...drafts, ...selected.map((file, index) => ({ id: `draft-${Date.now()}-${index}-${globalThis.crypto.randomUUID()}`, image: URL.createObjectURL(file), draft: true }))];
+    const nextDrafts = [...selected.map((file, index) => ({ id: `draft-${Date.now()}-${index}-${globalThis.crypto.randomUUID()}`, image: URL.createObjectURL(file), draft: true })), ...drafts];
     setDrafts(nextDrafts);
     setMessage("");
     setPreview(true);
@@ -199,7 +203,7 @@ export default function Page() {
         setMessage("그리드 캡처를 읽지 못했어요. 다시 선택해 주세요.");
         return;
       }
-      const nextDrafts = selected.map((image, index) => ({ id: `draft-${Date.now()}-${index}`, image: URL.createObjectURL(image), draft: true }));
+      const nextDrafts = [...selected.map((image, index) => ({ id: `draft-${Date.now()}-${index}-${globalThis.crypto.randomUUID()}`, image: URL.createObjectURL(image), draft: true })), ...drafts];
       setDrafts(nextDrafts);
       setMessage("");
       setPreview(true);
@@ -222,11 +226,60 @@ export default function Page() {
       setMessage("그리드 캡처를 읽지 못했어요. 다시 붙여넣어 주세요.");
       return;
     }
-    const nextDrafts = selected.map((image, index) => ({ id: `draft-${Date.now()}-${index}`, image: URL.createObjectURL(image), draft: true }));
+    const nextDrafts = [...selected.map((image, index) => ({ id: `draft-${Date.now()}-${index}-${globalThis.crypto.randomUUID()}`, image: URL.createObjectURL(image), draft: true })), ...drafts];
     setDrafts(nextDrafts);
     setMessage("");
     setPreview(true);
     void saveDraftPhotos(nextDrafts).catch(() => undefined);
+  }
+
+  function startTilePress(event: React.PointerEvent<HTMLButtonElement>, postId: string) {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current);
+    longPressTimer.current = window.setTimeout(() => {
+      setDraggedPostId(postId);
+      suppressTileClick.current = true;
+    }, 450);
+  }
+
+  function moveTile(event: React.PointerEvent<HTMLElement>) {
+    if (!draggedPostId) return;
+    event.preventDefault();
+    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
+    setDragOverPostId(target || null);
+  }
+
+  function finishTilePress(event: React.PointerEvent<HTMLElement>) {
+    if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current);
+    longPressTimer.current = null;
+    if (!draggedPostId) return;
+    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
+    if (target && target !== draggedPostId) {
+      const from = drafts.findIndex((post) => post.id === draggedPostId);
+      const to = drafts.findIndex((post) => post.id === target);
+      if (from >= 0 && to >= 0) {
+        const next = [...drafts];
+        const [moved] = next.splice(from, 1);
+        next.splice(to, 0, moved);
+        setDrafts(next);
+        void saveDraftPhotos(next).catch(() => undefined);
+      }
+    }
+    setDraggedPostId(null);
+    setDragOverPostId(null);
+    window.setTimeout(() => { suppressTileClick.current = false; }, 0);
+  }
+
+  function cancelTilePress() {
+    if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current);
+    longPressTimer.current = null;
+    setDraggedPostId(null);
+    setDragOverPostId(null);
+  }
+
+  function openPost(post: Post) {
+    if (suppressTileClick.current) return;
+    setSelectedPost(post);
   }
 
   function removePost(postId: string) {
@@ -297,11 +350,11 @@ export default function Page() {
   return <>
     <main className="preview-page">
     <header className="profile-bar"><button type="button" aria-label="뒤로 가기" onClick={() => setPreview(false)}>‹</button><strong>@{username || "mygrid"}</strong></header>
-    <section className="profile-scroll">
+    <section className="profile-scroll" onPointerMove={moveTile} onPointerUp={finishTilePress} onPointerCancel={cancelTilePress}>
       <div className="profile-summary"><div className="avatar"><GridMark /></div><div className="stat"><b>{allPosts.length}</b><small>게시물</small></div><div className="stat"><b>—</b><small>팔로워</small></div><div className="stat"><b>—</b><small>팔로잉</small></div></div>
       <h2 className="profile-name">{username || "mygrid"}</h2>
       <div className="profile-tabs"><span className="selected">▦</span></div>
-      {allPosts.length ? <div className="grid">{Array.from({ length: Math.ceil(allPosts.length / 3) }, (_, row) => <div className="grid-row" key={row}>{[0, 1, 2].map((column) => { const post = allPosts[row * 3 + column]; return post ? <button className="tile" type="button" key={post.id} onClick={() => setSelectedPost(post)} aria-label="게시물 크게 보기"><img src={mediaUrl(post.image)} alt="게시물" /></button> : <div className="tile placeholder" key={`empty-${row}-${column}`} />; })}</div>)}</div> : <div className="empty"><b>피드가 기다리고 있어요</b><small>사진을 추가해 나만의 그리드를 만들어 보세요.</small></div>}
+      {allPosts.length ? <div className="grid">{Array.from({ length: Math.ceil(allPosts.length / 3) }, (_, row) => <div className="grid-row" key={row}>{[0, 1, 2].map((column) => { const post = allPosts[row * 3 + column]; return post ? <button className={`tile${draggedPostId === post.id ? " is-dragging" : ""}${dragOverPostId === post.id ? " drop-target" : ""}`} type="button" key={post.id} data-post-id={post.id} onPointerDown={(event) => startTilePress(event, post.id)} onContextMenu={(event) => event.preventDefault()} onClick={() => openPost(post)} aria-label="길게 눌러 게시물 이동"><img src={mediaUrl(post.image)} alt="게시물" /></button> : <div className="tile placeholder" key={`empty-${row}-${column}`} />; })}</div>)}</div> : <div className="empty"><b>피드가 기다리고 있어요</b><small>사진을 추가해 나만의 그리드를 만들어 보세요.</small></div>}
     </section>
     <footer className="add-bar"><label className="add-button" aria-label="다음 사진 추가">＋<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={choosePhotos} /></label></footer>
     </main>
