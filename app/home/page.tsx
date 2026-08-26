@@ -343,11 +343,6 @@ export default function Page() {
 
   function choosePhotos(event: ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(event.target.files ?? []).filter((file) => file.type.startsWith("image/"));
-    if (!username.trim()) {
-      setMessage("Instagram 아이디를 입력해 주세요.");
-      event.target.value = "";
-      return;
-    }
     if (!selected.length) {
       setMessage("사진을 한 장 이상 선택해 주세요.");
       event.target.value = "";
@@ -355,6 +350,11 @@ export default function Page() {
     }
     openPhotoEditor(selected);
     event.target.value = "";
+  }
+
+  function startEmptyProfile() {
+    setPreview(true);
+    setMessage("");
   }
 
   async function chooseGridScreenshot(event: ChangeEvent<HTMLInputElement>) {
@@ -501,8 +501,8 @@ export default function Page() {
           </div>
           {message && <div className="error" role="alert">{message}</div>}
           <label className="upload-option upload-option-featured"><span className="upload-option-mark"><GridMark uniform /></span><span className="upload-option-copy"><b>인스타 프로필 캡처</b><small>한 장 올리면 자동으로 나눠요.</small></span><span className="upload-option-arrow">↑</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label>
-          <label className="upload-option"><span className="upload-option-mark">＋</span><span className="upload-option-copy"><b>사진 직접 올리기</b><small>첫 장 이미지를 여러 장 선택해요.</small></span><span className="upload-option-arrow">↑</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={choosePhotos} /></label>
         </section>
+        <button className="primary start-button" type="button" onClick={startEmptyProfile}><b>바로 시작하기</b><span>→</span></button>
         <section className="install-tip" aria-label="홈 화면에 추가하는 방법">
           <div className="tip-heading"><div><small>TIP</small><h2>앱으로 더 편하게</h2><p>마이그리드를 홈 화면에 추가해 보세요.</p></div><b>{String(activeTip + 1).padStart(2, "0")} / {String(INSTALL_TIPS.length).padStart(2, "0")}</b></div>
           <div className="tip-slider" onTouchStart={startTipSwipe} onTouchEnd={endTipSwipe}>
