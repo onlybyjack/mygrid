@@ -1,24 +1,30 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Noto+Sans+KR:wght@500;600;700;800&display=swap');
 
-:root { --ink:#242336; --muted:#77756d; --paper:#f7f4ec; --panel:#fffdf9; --line:#e4dfd4; --accent:#efb4c5; --orange:#c98597; }
+:root { --ink:#36344f; --muted:#8589a2; --paper:#fffaf7; --panel:#ffffff; --line:#ebe5e4; --accent:#ff7473; --orange:#df6070; --yellow:#ffc95c; --sky:#4db3d4; }
 * { box-sizing:border-box; }
-html, body { margin:0; min-height:100%; background:#242336; }
+html, body { margin:0; min-height:100%; background:#36344f; }
 body { color:var(--ink); font-family:Inter,'Noto Sans KR',sans-serif; }
 button, input { font:inherit; }
 button { cursor:pointer; }
 .connect-page, .preview-page { width:100%; max-width:620px; min-height:100dvh; margin:0 auto; background:var(--paper); }
 .splash-page { width:100%; min-height:100dvh; display:grid; place-content:center; justify-items:center; gap:12px; color:var(--ink); background:var(--accent); }
 .splash-logo { width:64px; height:64px; display:grid; place-items:center; border-radius:50%; color:var(--accent); background:var(--ink); font-size:28px; font-weight:800; animation:splash-pop .7s ease both; }
+.splash-logo .grid-mark { width:34px; height:34px; gap:3px; }
 .splash-page strong { font-size:22px; letter-spacing:-.06em; animation:splash-fade .7s ease both; }
 @keyframes splash-pop { from { opacity:0; transform:scale(.8); } to { opacity:1; transform:scale(1); } }
 @keyframes splash-fade { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
-.logo { width:40px; height:40px; display:grid; place-items:center; border-radius:50%; color:var(--ink); background:var(--accent); font-weight:800; }
+.logo { width:40px; height:40px; display:grid; place-items:center; border-radius:12px; color:var(--ink); background:var(--accent); font-weight:800; }
+.grid-mark { width:23px; height:23px; display:grid; grid-template-columns:repeat(3, 1fr); gap:2px; }
+.grid-mark i { display:block; border-radius:2px; background:var(--ink); }
+.grid-mark i:nth-child(1), .grid-mark i:nth-child(5), .grid-mark i:nth-child(9) { background:var(--accent); }
+.grid-mark i:nth-child(2), .grid-mark i:nth-child(6) { background:var(--yellow); }
+.grid-mark i:nth-child(3), .grid-mark i:nth-child(7) { background:var(--sky); }
 .brand-row { height:76px; padding:0 24px; display:flex; align-items:center; justify-content:space-between; }
 .brand { display:flex; align-items:center; gap:10px; font-size:19px; letter-spacing:-.06em; }
 .connect-content { padding:28px 22px 22px; }
 h1 { margin:16px 0 13px; font-size:44px; line-height:1.04; letter-spacing:-.08em; }
 .lead { max-width:390px; margin:0 0 24px; color:var(--muted); font-size:14px; line-height:1.6; }
-.connect-card { padding:20px; border:1px solid var(--line); border-radius:22px; background:var(--panel); box-shadow:0 12px 30px #24233610; }
+.connect-card { padding:20px; border:1px solid var(--line); border-radius:22px; background:var(--panel); box-shadow:0 12px 30px #36344f10; }
 .connect-card h2 { margin:0 0 5px; font-size:18px; letter-spacing:-.04em; }
 .connect-card p { margin:0 0 24px; color:var(--muted); font-size:12px; }
 .connect-card label { display:block; margin-bottom:8px; color:var(--muted); font-size:11px; }

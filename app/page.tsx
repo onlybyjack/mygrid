@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import GridMark from "./components/grid-mark";
 
 export default function Page() {
   useEffect(() => {
@@ -11,7 +12,7 @@ export default function Page() {
 
   return (
     <main className="splash-page" aria-label="MyGrid 시작">
-      <div className="splash-logo">M</div>
+      <div className="splash-logo"><GridMark /></div>
       <strong>mygrid</strong>
     </main>
   );

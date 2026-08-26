@@ -2,6 +2,7 @@
 
 import { ChangeEvent, FormEvent, TouchEvent, useEffect, useMemo, useRef, useState } from "react";
 import { deleteDraftPhoto, readDraftPhotos, saveDraftPhotos } from "../../lib/instagram-export";
+import GridMark from "../components/grid-mark";
 
 type Post = { id: string; image: string; draft?: boolean };
 type Profile = { fullName?: string; avatar?: string; followers?: number; following?: number };
@@ -203,14 +204,14 @@ export default function Page() {
 
   if (!hydrated) {
     return <main className="splash-page" aria-label="MyGrid 불러오는 중" aria-busy="true">
-      <div className="splash-logo">M</div>
+      <div className="splash-logo"><GridMark /></div>
       <strong>mygrid</strong>
     </main>;
   }
 
   if (!preview) {
     return <main className="connect-page">
-      <header className="brand-row"><div className="brand"><div className="logo">M</div><strong>mygrid</strong></div></header>
+      <header className="brand-row"><div className="brand"><div className="logo"><GridMark /></div><strong>mygrid</strong></div></header>
       <section className="connect-content">
         <h1>내 피드를<br />1초 만에 가져오세요.</h1>
         <p className="lead">Instagram 아이디만 입력하면, 나만의 피드가 시작돼요.<br />이제 마이그리드에서 감성 있게 피드를 꾸며보세요.</p>

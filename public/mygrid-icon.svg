@@ -1,4 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="128" fill="#EFB4C5"/>
-  <text x="256" y="334" text-anchor="middle" font-family="Arial, sans-serif" font-size="280" font-weight="800" fill="#242336">M</text>
+  <rect width="512" height="512" rx="128" fill="#FF7473"/>
+  <g>
+    <rect x="124" y="124" width="56" height="56" rx="12" fill="#FF7473"/>
+    <rect x="200" y="124" width="56" height="56" rx="12" fill="#FFC95C"/>
+    <rect x="276" y="124" width="56" height="56" rx="12" fill="#4DB3D4"/>
+    <rect x="124" y="200" width="56" height="56" rx="12" fill="#36344F"/>
+    <rect x="200" y="200" width="56" height="56" rx="12" fill="#FF7473"/>
+    <rect x="276" y="200" width="56" height="56" rx="12" fill="#FFC95C"/>
+    <rect x="124" y="276" width="56" height="56" rx="12" fill="#4DB3D4"/>
+    <rect x="200" y="276" width="56" height="56" rx="12" fill="#36344F"/>
+    <rect x="276" y="276" width="56" height="56" rx="12" fill="#FF7473"/>
+  </g>
 </svg>
