@@ -399,14 +399,13 @@ export default function Page() {
 
   return <>
     <main className="preview-page">
-    <header className="profile-bar"><button type="button" aria-label="뒤로 가기" onClick={() => setPreview(false)}>‹</button><strong>@{username || "mygrid"}</strong></header>
+    <header className="profile-bar"><label className="profile-add-button" aria-label="다음 사진 추가">＋<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={choosePhotos} /></label><strong>@{username || "mygrid"}</strong><span aria-hidden="true" /></header>
     <section className="profile-scroll" onPointerMove={moveTile} onPointerUp={finishTilePress} onPointerCancel={cancelTilePress}>
       <div className="profile-summary"><div className="avatar"><GridMark /></div><div className="stat"><b>{allPosts.length}</b><small>게시물</small></div><div className="stat"><b>—</b><small>팔로워</small></div><div className="stat"><b>—</b><small>팔로잉</small></div></div>
       <h2 className="profile-name">{username || "mygrid"}</h2>
       <div className="profile-tabs"><span className="selected"><GridMark uniform /></span></div>
       {allPosts.length ? <div className="grid">{Array.from({ length: Math.ceil(allPosts.length / 3) }, (_, row) => <div className="grid-row" key={row}>{[0, 1, 2].map((column) => { const post = allPosts[row * 3 + column]; return post ? <button className={`tile${draggedPostId === post.id ? " is-dragging" : ""}${dragOverPostId === post.id ? " drop-target" : ""}`} type="button" key={post.id} data-post-id={post.id} onPointerDown={(event) => startTilePress(event, post.id)} onPointerMove={moveTile} onPointerUp={finishTilePress} onTouchMove={moveTileTouch} onTouchEnd={finishTileTouch} onContextMenu={(event) => event.preventDefault()} onClick={() => openPost(post)} aria-label="길게 눌러 게시물 이동"><img src={mediaUrl(post.image)} alt="게시물" /></button> : <div className="tile placeholder" key={`empty-${row}-${column}`} />; })}</div>)}</div> : <div className="empty"><b>피드가 기다리고 있어요</b><small>사진을 추가해 나만의 그리드를 만들어 보세요.</small></div>}
     </section>
-    <footer className="add-bar"><label className="add-button" aria-label="다음 사진 추가">＋<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={choosePhotos} /></label></footer>
     </main>
     {selectedPost && <div className="image-viewer" role="dialog" aria-modal="true" aria-label="Instagram 게시물 보기" onClick={() => setSelectedPost(null)}>
       <div className="viewer-content" onClick={(event) => event.stopPropagation()}>
