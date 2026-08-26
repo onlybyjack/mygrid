@@ -93,28 +93,32 @@ export async function GET(request: Request) {
   }
 
   try {
-    const response = await fetch(
-      `https://www.instagram.com/api/v1/users/web_profile_info/?username=${encodeURIComponent(username)}`,
-      {
-        cache: "no-store",
-        headers: {
-          Accept: "application/json",
-          "Accept-Language": "en-US,en;q=0.9",
-          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
-          "X-IG-App-ID": INSTAGRAM_APP_ID,
-          "X-ASBD-ID": "198387",
-          "X-Requested-With": "XMLHttpRequest",
-          Referer: `https://www.instagram.com/${encodeURIComponent(username)}/`,
-          Origin: "https://www.instagram.com",
-          "Sec-Fetch-Dest": "empty",
-          "Sec-Fetch-Mode": "cors",
-          "Sec-Fetch-Site": "same-origin",
-        },
-      },
-    );
     let user: InstagramUser | null = null;
-    if (response.ok) {
-      try { user = readUser(await response.json()); } catch { /* Try the public HTML payload below. */ }
+    for (const host of ["www.instagram.com", "i.instagram.com"]) {
+      try {
+        const response = await fetch(
+          `https://${host}/api/v1/users/web_profile_info/?username=${encodeURIComponent(username)}`,
+          {
+            cache: "no-store",
+            headers: {
+              Accept: "application/json",
+              "Accept-Language": "en-US,en;q=0.9",
+              "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/151.0.0.0 Safari/537.36",
+              "X-IG-App-ID": INSTAGRAM_APP_ID,
+              "X-ASBD-ID": "198387",
+              "X-Requested-With": "XMLHttpRequest",
+              Referer: `https://www.instagram.com/${encodeURIComponent(username)}/`,
+              Origin: "https://www.instagram.com",
+              "Sec-Fetch-Dest": "empty",
+              "Sec-Fetch-Mode": "cors",
+              "Sec-Fetch-Site": "same-origin",
+            },
+          },
+        );
+        if (!response.ok) continue;
+        try { user = readUser(await response.json()); } catch { /* Try the next Instagram host. */ }
+        if (user) break;
+      } catch { /* Try the next Instagram host. */ }
     }
     let htmlFound = false;
     if (!user) {
