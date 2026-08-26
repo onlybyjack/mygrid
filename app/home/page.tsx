@@ -190,7 +190,11 @@ export default function Page() {
   const draftsRef = useRef<Post[]>([]);
   const tipStartX = useRef<number | null>(null);
   const longPressTimer = useRef<number | null>(null);
+  const pressOrigin = useRef<{ x: number; y: number; pointerId: number } | null>(null);
+  const draggedPostIdRef = useRef<string | null>(null);
+  const dragOverPostIdRef = useRef<string | null>(null);
   const draggedTile = useRef<HTMLButtonElement | null>(null);
+  const tileAnimations = useRef(new Map<string, Animation>());
   const suppressTileClick = useRef(false);
 
   useEffect(() => {
@@ -445,7 +449,11 @@ export default function Page() {
     if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current);
     const tile = event.currentTarget;
     const pointerId = event.pointerId;
+    pressOrigin.current = { x: event.clientX, y: event.clientY, pointerId };
     longPressTimer.current = window.setTimeout(() => {
+      pressOrigin.current = null;
+      draggedPostIdRef.current = postId;
+      dragOverPostIdRef.current = null;
       setDraggedPostId(postId);
       suppressTileClick.current = true;
       draggedTile.current = tile;
@@ -458,32 +466,72 @@ export default function Page() {
     const from = current.findIndex((post) => post.id === postId);
     const to = current.findIndex((post) => post.id === targetId);
     if (from < 0 || to < 0 || from === to) return;
+    const before = new Map<string, DOMRect>();
+    document.querySelectorAll<HTMLElement>("[data-post-id]").forEach((tile) => {
+      if (tile.dataset.postId) before.set(tile.dataset.postId, tile.getBoundingClientRect());
+    });
     const next = [...current];
     const [moved] = next.splice(from, 1);
     next.splice(to, 0, moved);
     draftsRef.current = next;
     setDrafts(next);
     persistDraftOrder(next);
+    window.requestAnimationFrame(() => {
+      next.forEach((post) => {
+        if (post.id === postId) return;
+        const tile = document.querySelector<HTMLElement>(`[data-post-id="${CSS.escape(post.id)}"]`);
+        const previous = before.get(post.id);
+        if (!tile || !previous) return;
+        const currentRect = tile.getBoundingClientRect();
+        const offsetX = previous.left - currentRect.left;
+        const offsetY = previous.top - currentRect.top;
+        if (!offsetX && !offsetY) return;
+        tileAnimations.current.get(post.id)?.cancel();
+        const animation = tile.animate(
+          [{ transform: `translate(${offsetX}px, ${offsetY}px)` }, { transform: "translate(0, 0)" }],
+          { duration: 220, easing: "cubic-bezier(.2,.8,.2,1)" },
+        );
+        tileAnimations.current.set(post.id, animation);
+        void animation.finished.then(() => {
+          if (tileAnimations.current.get(post.id) === animation) tileAnimations.current.delete(post.id);
+        }).catch(() => undefined);
+      });
+    });
   }
 
   function moveTile(event: React.PointerEvent<HTMLElement>) {
-    if (!draggedPostId) return;
+    if (!draggedPostIdRef.current) {
+      const origin = pressOrigin.current;
+      if (origin?.pointerId === event.pointerId && Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 10) {
+        if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
+        pressOrigin.current = null;
+      }
+      return;
+    }
     event.preventDefault();
     const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
-    setDragOverPostId(target || null);
-    if (target && target !== draggedPostId && target !== dragOverPostId) reorderPosts(draggedPostId, target);
+    if (target !== dragOverPostIdRef.current) {
+      dragOverPostIdRef.current = target || null;
+      setDragOverPostId(target || null);
+      if (target && target !== draggedPostIdRef.current) reorderPosts(draggedPostIdRef.current, target);
+    }
   }
 
   function finishTilePress(event: React.PointerEvent<HTMLElement>) {
     if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current);
     longPressTimer.current = null;
-    if (!draggedPostId) {
+    pressOrigin.current = null;
+    const draggedId = draggedPostIdRef.current;
+    if (!draggedId) {
       draggedTile.current = null;
       return;
     }
-    const target = dragOverPostId || document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
-    if (target && target !== draggedPostId) reorderPosts(draggedPostId, target);
+    const target = dragOverPostIdRef.current || document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
+    if (target && target !== draggedId) reorderPosts(draggedId, target);
     try { draggedTile.current?.releasePointerCapture(event.pointerId); } catch { /* Pointer capture is already released. */ }
+    draggedPostIdRef.current = null;
+    dragOverPostIdRef.current = null;
     draggedTile.current = null;
     setDraggedPostId(null);
     setDragOverPostId(null);
@@ -493,6 +541,9 @@ export default function Page() {
   function cancelTilePress() {
     if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current);
     longPressTimer.current = null;
+    pressOrigin.current = null;
+    draggedPostIdRef.current = null;
+    dragOverPostIdRef.current = null;
     draggedTile.current = null;
     setDraggedPostId(null);
     setDragOverPostId(null);

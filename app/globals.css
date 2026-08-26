@@ -136,9 +136,11 @@ h1 span { white-space:nowrap; }
 .profile-tab .grid-mark i { display:block; background:var(--ink); }
 .profile-tab.selected { color:var(--ink); border-bottom:2px solid var(--ink); }
 .grid-row { display:flex; gap:2px; }
-.tile { position:relative; flex:1; aspect-ratio:3 / 4; overflow:hidden; padding:0; border:0; color:inherit; background:#ede9df; cursor:grab; font:inherit; touch-action:pan-y; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; -webkit-user-drag:none; transition:opacity .15s, transform .15s; }
-.tile.is-dragging { opacity:.45; transform:scale(.96); cursor:grabbing; }
-.tile.drop-target { outline:3px solid var(--ink); outline-offset:-3px; }
+.tile { position:relative; flex:1; aspect-ratio:3 / 4; overflow:hidden; padding:0; border:0; color:inherit; background:#ede9df; cursor:grab; font:inherit; touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; -webkit-user-drag:none; transition:opacity .15s, transform .15s; }
+.tile.is-dragging { z-index:2; opacity:.52; transform:scale(.94); cursor:grabbing; box-shadow:0 10px 20px #0003; }
+.tile.drop-target { outline:3px solid var(--accent); outline-offset:-3px; box-shadow:inset 0 0 0 3px #fff, 0 0 0 3px var(--accent); animation:drop-target-pulse .55s ease-in-out infinite alternate; }
+.tile.drop-target::after { content:""; position:absolute; inset:5px; border:2px dashed #fff; pointer-events:none; }
+@keyframes drop-target-pulse { from { transform:scale(.98); } to { transform:scale(1); } }
 .tile:focus-visible { outline:3px solid var(--accent); outline-offset:-3px; }
 .tile img { width:100%; height:100%; display:block; object-fit:cover; }
 .tile img { pointer-events:none; -webkit-user-drag:none; }
