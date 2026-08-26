@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Noto+Sans+KR:wght@500;600;700;800&display=swap');
 
-:root { --ink:#171717; --muted:#777777; --paper:#f7f7f5; --panel:#ffffff; --line:#e1e1df; --accent:#efefec; --orange:#4b4b4b; --yellow:#a9a9a7; --sky:#737371; }
+:root { --ink:#171717; --muted:#777777; --paper:#f7f7f5; --panel:#ffffff; --line:#e1e1df; --accent:#efefec; --orange:#4b4b4b; --error:#d94350; --yellow:#a9a9a7; --sky:#737371; }
 * { box-sizing:border-box; }
 html, body { margin:0; min-height:100%; background:#171717; }
 body { color:var(--ink); font-family:Inter,'Noto Sans KR',sans-serif; }
@@ -33,7 +33,7 @@ h1 { margin:16px 0 13px; font-size:44px; line-height:1.04; letter-spacing:-.08em
 .input-row input::placeholder { color:#a8b0a8; }
 .file-picker { display:flex; align-items:center; min-height:42px; margin-top:12px; padding:0 12px; border:1px dashed var(--line); border-radius:10px; color:var(--muted); background:var(--paper); font-size:12px; cursor:pointer; }
 .file-picker input { display:none; }
-.error { margin:10px 0 0; color:var(--orange); font-size:12px; line-height:1.5; }
+.error { margin:10px 0 0; color:var(--error); font-size:12px; font-weight:700; line-height:1.5; }
 .primary { width:100%; height:48px; display:flex; align-items:center; justify-content:space-between; margin-top:12px; padding:0 10px 0 16px; border:0; border-radius:24px; color:#fff; background:var(--ink); }
 .primary b { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:14px; }
 .primary span { width:32px; height:32px; display:grid; place-items:center; flex:none; border-radius:50%; color:var(--ink); background:var(--accent); font-size:19px; }
