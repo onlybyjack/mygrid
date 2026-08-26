@@ -144,6 +144,23 @@ h1 { margin:16px 0 13px; font-size:44px; line-height:1.04; letter-spacing:-.08em
 .viewer-close { position:fixed; top:max(16px, env(safe-area-inset-top)); right:max(16px, env(safe-area-inset-right)); z-index:1; width:44px; height:44px; display:grid; place-items:center; padding:0; border:1px solid #ffffff55; border-radius:50%; color:#fff; background:#0008; }
 .viewer-delete { width:48px; height:48px; display:grid; place-items:center; padding:0; border:0; border-radius:50%; color:#fff; background:var(--orange); box-shadow:0 8px 24px #0008; }
 .viewer-delete:active { transform:translateY(1px); }
+.photo-editor { position:fixed; z-index:30; inset:0; display:flex; align-items:flex-end; justify-content:center; padding:16px; background:#171717e8; }
+.editor-panel { width:min(100%, 520px); padding:16px; border-radius:22px 22px 12px 12px; color:var(--ink); background:var(--paper); }
+.editor-heading { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.editor-heading b { font-size:15px; }
+.editor-heading span { color:var(--muted); font-size:11px; }
+.editor-heading button { margin-left:auto; padding:4px 0; border:0; color:var(--muted); background:transparent; font-size:12px; }
+.crop-stage { width:100%; max-height:48vh; display:grid; place-items:center; overflow:hidden; margin:auto; background:#dededb; }
+.crop-stage.crop-portrait { aspect-ratio:3 / 4; }
+.crop-stage.crop-square { aspect-ratio:1; }
+.crop-stage.crop-landscape { aspect-ratio:4 / 3; }
+.crop-stage img { width:100%; height:100%; object-fit:contain; transform-origin:center; user-select:none; -webkit-user-drag:none; }
+.aspect-buttons { display:flex; gap:7px; margin:14px 0 10px; }
+.aspect-buttons button { flex:1; padding:9px 4px; border:1px solid var(--line); border-radius:9px; color:var(--muted); background:var(--paper); font-size:11px; }
+.aspect-buttons button.active { border-color:var(--ink); color:var(--paper); background:var(--ink); }
+.editor-range { display:flex; align-items:center; gap:9px; margin-top:8px; color:var(--muted); font-size:10px; }
+.editor-range input { flex:1; accent-color:var(--ink); }
+.editor-confirm { width:100%; margin-top:14px; padding:12px; border:0; border-radius:11px; color:var(--paper); background:var(--ink); font-size:13px; font-weight:700; }
 .empty { min-height:350px; display:grid; place-content:center; justify-items:center; gap:8px; border:1px solid var(--line); margin:16px; }
 .empty small, .sync-note { color:var(--muted); font-size:12px; }
 .sync-note { padding:12px 18px; margin:0; color:var(--orange); }

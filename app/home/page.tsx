@@ -5,6 +5,7 @@ import { deleteDraftPhoto, readDraftPhotos, saveDraftPhotos } from "../../lib/in
 import GridMark from "../components/grid-mark";
 
 type Post = { id: string; image: string; draft?: boolean };
+type CropAspect = "portrait" | "square" | "landscape";
 const IDENTITY_KEY = "mygrid:identity";
 
 const INSTALL_TIPS = [
@@ -16,6 +17,32 @@ const INSTALL_TIPS = [
 function mediaUrl(url: string) {
   if (url.startsWith("/") || url.startsWith("blob:") || url.startsWith("data:")) return url;
   return `/api/image?url=${encodeURIComponent(url)}`;
+}
+
+let draftSaveQueue = Promise.resolve();
+
+function persistDrafts(posts: Post[]) {
+  draftSaveQueue = draftSaveQueue.then(() => saveDraftPhotos(posts)).catch(() => undefined);
+}
+
+async function preparePhoto(file: File): Promise<File> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const longest = Math.max(bitmap.width, bitmap.height);
+    if (longest <= 1600) { bitmap.close(); return file; }
+    const scale = 1600 / longest;
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext("2d");
+    if (!context) { bitmap.close(); return file; }
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+    return blob ? new File([blob], `${file.name.replace(/\.[^.]+$/, "")}.jpg`, { type: "image/jpeg" }) : file;
+  } catch {
+    return file;
+  }
 }
 
 async function splitGridScreenshot(file: File): Promise<File[]> {
@@ -109,6 +136,14 @@ export default function Page() {
   const [dragOverPostId, setDragOverPostId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [activeTip, setActiveTip] = useState(0);
+  const [editorFiles, setEditorFiles] = useState<File[]>([]);
+  const [editorIndex, setEditorIndex] = useState(0);
+  const [editorAspect, setEditorAspect] = useState<CropAspect>("portrait");
+  const [editorZoom, setEditorZoom] = useState(1);
+  const [editorOffsetX, setEditorOffsetX] = useState(0);
+  const [editorOffsetY, setEditorOffsetY] = useState(0);
+  const [editorPreviewUrl, setEditorPreviewUrl] = useState("");
+  const editedFilesRef = useRef<File[]>([]);
   const draftsRef = useRef<Post[]>([]);
   const tipStartX = useRef<number | null>(null);
   const longPressTimer = useRef<number | null>(null);
@@ -171,6 +206,67 @@ export default function Page() {
     saveIdentity(next);
   }
 
+  function openPhotoEditor(files: File[]) {
+    editedFilesRef.current = [];
+    setEditorFiles(files);
+    setEditorIndex(0);
+    setEditorAspect("portrait");
+    setEditorZoom(1);
+    setEditorOffsetX(0);
+    setEditorOffsetY(0);
+  }
+
+  useEffect(() => {
+    const file = editorFiles[editorIndex];
+    if (!file) { setEditorPreviewUrl(""); return; }
+    const url = URL.createObjectURL(file);
+    setEditorPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [editorFiles, editorIndex]);
+
+  async function cropPhoto(file: File): Promise<File> {
+    const bitmap = await createImageBitmap(file);
+    const aspect = editorAspect === "square" ? 1 : editorAspect === "landscape" ? 4 / 3 : 3 / 4;
+    const sourceAspect = bitmap.width / bitmap.height;
+    const cropWidth = sourceAspect > aspect ? bitmap.height * aspect / editorZoom : bitmap.width / editorZoom;
+    const cropHeight = cropWidth / aspect;
+    const maxX = (bitmap.width - cropWidth) / 2;
+    const maxY = (bitmap.height - cropHeight) / 2;
+    const sourceX = Math.max(0, Math.min(bitmap.width - cropWidth, (bitmap.width - cropWidth) / 2 + editorOffsetX * maxX));
+    const sourceY = Math.max(0, Math.min(bitmap.height - cropHeight, (bitmap.height - cropHeight) / 2 + editorOffsetY * maxY));
+    const outputWidth = 1200;
+    const outputHeight = Math.round(outputWidth / aspect);
+    const canvas = document.createElement("canvas");
+    canvas.width = outputWidth;
+    canvas.height = outputHeight;
+    canvas.getContext("2d")?.drawImage(bitmap, sourceX, sourceY, cropWidth, cropHeight, 0, 0, outputWidth, outputHeight);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+    return blob ? new File([blob], `edited-${Date.now()}.jpg`, { type: "image/jpeg" }) : file;
+  }
+
+  async function confirmCrop() {
+    const file = editorFiles[editorIndex];
+    if (!file) return;
+    setMessage("사진을 준비하고 있어요.");
+    const cropped = await cropPhoto(file);
+    editedFilesRef.current.push(cropped);
+    if (editorIndex + 1 < editorFiles.length) {
+      setEditorIndex((index) => index + 1);
+      setEditorZoom(1);
+      setEditorOffsetX(0);
+      setEditorOffsetY(0);
+      return;
+    }
+    const prepared = await Promise.all(editedFilesRef.current.map(preparePhoto));
+    const nextDrafts = [...prepared.map((photo, index) => ({ id: `draft-${Date.now()}-${index}-${globalThis.crypto.randomUUID()}`, image: URL.createObjectURL(photo), draft: true })), ...drafts];
+    setDrafts(nextDrafts);
+    persistDrafts(nextDrafts);
+    setEditorFiles([]);
+    setMessage("");
+    setPreview(true);
+  }
+
   function choosePhotos(event: ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(event.target.files ?? []).filter((file) => file.type.startsWith("image/"));
     if (!username.trim()) {
@@ -183,11 +279,7 @@ export default function Page() {
       event.target.value = "";
       return;
     }
-    const nextDrafts = [...selected.map((file, index) => ({ id: `draft-${Date.now()}-${index}-${globalThis.crypto.randomUUID()}`, image: URL.createObjectURL(file), draft: true })), ...drafts];
-    setDrafts(nextDrafts);
-    setMessage("");
-    setPreview(true);
-    void saveDraftPhotos(nextDrafts).catch(() => undefined);
+    openPhotoEditor(selected);
     event.target.value = "";
   }
 
@@ -205,11 +297,7 @@ export default function Page() {
         setMessage("그리드 캡처를 읽지 못했어요. 다시 선택해 주세요.");
         return;
       }
-      const nextDrafts = [...selected.map((image, index) => ({ id: `draft-${Date.now()}-${index}-${globalThis.crypto.randomUUID()}`, image: URL.createObjectURL(image), draft: true })), ...drafts];
-      setDrafts(nextDrafts);
-      setMessage("");
-      setPreview(true);
-      void saveDraftPhotos(nextDrafts).catch(() => undefined);
+      openPhotoEditor(selected);
     } catch {
       setMessage("그리드 캡처를 읽지 못했어요. 다시 선택해 주세요.");
     }
@@ -228,11 +316,7 @@ export default function Page() {
       setMessage("그리드 캡처를 읽지 못했어요. 다시 붙여넣어 주세요.");
       return;
     }
-    const nextDrafts = [...selected.map((image, index) => ({ id: `draft-${Date.now()}-${index}-${globalThis.crypto.randomUUID()}`, image: URL.createObjectURL(image), draft: true })), ...drafts];
-    setDrafts(nextDrafts);
-    setMessage("");
-    setPreview(true);
-    void saveDraftPhotos(nextDrafts).catch(() => undefined);
+    openPhotoEditor(selected);
   }
 
   function startTilePress(event: React.PointerEvent<HTMLButtonElement>, postId: string) {
@@ -287,7 +371,7 @@ export default function Page() {
     next.splice(to, 0, moved);
     draftsRef.current = next;
     setDrafts(next);
-    void saveDraftPhotos(next).catch(() => undefined);
+    persistDrafts(next);
   }
 
   function moveTile(event: React.PointerEvent<HTMLElement>) {
@@ -343,7 +427,7 @@ export default function Page() {
     setDrafts(nextPosts);
     if (postId.startsWith("draft-")) void deleteDraftPhoto(postId).catch(() => undefined);
     setSelectedPost(null);
-    void saveDraftPhotos(nextPosts).catch(() => undefined);
+    persistDrafts(nextPosts);
   }
 
   function moveTip(direction: number) {
@@ -420,5 +504,6 @@ export default function Page() {
         <button className="viewer-delete" type="button" onClick={() => removePost(selectedPost.id)} aria-label="게시물 삭제" title="게시물 삭제"><TrashIcon /></button>
       </div>
     </div>}
+    {editorFiles.length > 0 && editorPreviewUrl && <div className="photo-editor" role="dialog" aria-modal="true" aria-label="사진 편집"><div className="editor-panel"><div className="editor-heading"><b>사진 편집</b><span>{editorIndex + 1} / {editorFiles.length}</span><button type="button" onClick={() => setEditorFiles([])}>취소</button></div><div className={`crop-stage crop-${editorAspect}`}><img src={editorPreviewUrl} alt="편집할 사진" style={{ transform: `scale(${editorZoom}) translate(${editorOffsetX * 12}%, ${editorOffsetY * 12}%)` }} /></div><div className="aspect-buttons"><button type="button" className={editorAspect === "portrait" ? "active" : ""} onClick={() => setEditorAspect("portrait")}>세로 3:4</button><button type="button" className={editorAspect === "square" ? "active" : ""} onClick={() => setEditorAspect("square")}>정사각형</button><button type="button" className={editorAspect === "landscape" ? "active" : ""} onClick={() => setEditorAspect("landscape")}>가로 4:3</button></div><label className="editor-range">확대 <input type="range" min="1" max="2.5" step="0.01" value={editorZoom} onChange={(event) => setEditorZoom(Number(event.target.value))} /></label><label className="editor-range">가로 위치 <input type="range" min="-1" max="1" step="0.01" value={editorOffsetX} onChange={(event) => setEditorOffsetX(Number(event.target.value))} /></label><label className="editor-range">세로 위치 <input type="range" min="-1" max="1" step="0.01" value={editorOffsetY} onChange={(event) => setEditorOffsetY(Number(event.target.value))} /></label><button className="editor-confirm" type="button" onClick={() => void confirmCrop()}>{editorIndex + 1 < editorFiles.length ? "다음 사진" : "사진 추가"}</button></div></div>}
   </>;
 }
