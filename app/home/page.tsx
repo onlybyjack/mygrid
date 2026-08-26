@@ -250,6 +250,7 @@ export default function Page() {
         moveEvent.preventDefault();
         const target = document.elementFromPoint(point.clientX, point.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
         setDragOverPostId(target || null);
+        if (target && target !== postId) reorderPosts(postId, target);
       };
       const handleUp = (upEvent: Event) => {
         const point = "changedTouches" in upEvent ? (upEvent as unknown as TouchEvent).changedTouches[0] : upEvent as MouseEvent;
