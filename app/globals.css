@@ -16,8 +16,6 @@ button { cursor:pointer; }
 .logo { width:38px; height:38px; display:grid; place-items:center; border-radius:10px; color:var(--accent); background:var(--ink); font-weight:800; }
 .grid-mark { width:24px; height:24px; display:grid; grid-template-columns:repeat(3, 1fr); gap:2px; }
 .grid-mark i { display:block; background:var(--accent); }
-.grid-mark i:nth-child(2n) { opacity:.8; }
-.grid-mark i:nth-child(3n) { opacity:.6; }
 .brand-row { height:76px; padding:0 24px; display:flex; align-items:center; justify-content:space-between; }
 .brand { display:flex; align-items:center; gap:10px; font-size:19px; letter-spacing:-.06em; }
 .connect-content { padding:28px 22px 22px; }
@@ -54,10 +52,6 @@ h1 { margin:16px 0 13px; font-size:44px; line-height:1.04; letter-spacing:-.08em
 .upload-option-featured .upload-option-copy small { color:#c8c8c8; }
 .upload-option-arrow { width:28px; height:28px; display:grid; place-items:center; flex:none; margin-left:auto; border-radius:50%; color:var(--ink); background:var(--accent); font-size:17px; }
 .upload-option input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
-.upload-note { position:relative; display:flex; align-items:center; gap:6px; margin-top:-12px; color:var(--muted); font-size:11px; }
-.upload-note button { width:16px; height:16px; padding:0; border:1px solid var(--line); border-radius:50%; color:var(--muted); background:transparent; font-size:10px; line-height:14px; cursor:help; }
-.upload-note [role="tooltip"] { position:absolute; z-index:2; left:0; bottom:23px; display:none; width:max-content; max-width:220px; padding:8px 10px; border-radius:8px; color:var(--paper); background:var(--ink); box-shadow:0 8px 20px #17171720; font-size:11px; line-height:1.4; }
-.upload-note button:hover + [role="tooltip"], .upload-note button:focus-visible + [role="tooltip"] { display:block; }
 .install-tip { margin-top:28px; padding:18px; border:1px solid var(--line); border-radius:22px; background:#fff; }
 .tip-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
 .tip-heading small { color:var(--orange); font-size:10px; font-weight:800; letter-spacing:.12em; }

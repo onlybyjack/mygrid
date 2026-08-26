@@ -2,13 +2,13 @@
   <rect width="512" height="512" rx="128" fill="#171717"/>
   <g fill="#EFEFEC">
     <rect x="94" y="94" width="92" height="92"/>
-    <rect x="210" y="94" width="92" height="92" opacity=".8"/>
-    <rect x="326" y="94" width="92" height="92" opacity=".6"/>
-    <rect x="94" y="210" width="92" height="92" opacity=".8"/>
-    <rect x="210" y="210" width="92" height="92" opacity=".6"/>
+    <rect x="210" y="94" width="92" height="92"/>
+    <rect x="326" y="94" width="92" height="92"/>
+    <rect x="94" y="210" width="92" height="92"/>
+    <rect x="210" y="210" width="92" height="92"/>
     <rect x="326" y="210" width="92" height="92"/>
-    <rect x="94" y="326" width="92" height="92" opacity=".6"/>
+    <rect x="94" y="326" width="92" height="92"/>
     <rect x="210" y="326" width="92" height="92"/>
-    <rect x="326" y="326" width="92" height="92" opacity=".8"/>
+    <rect x="326" y="326" width="92" height="92"/>
   </g>
 </svg>
