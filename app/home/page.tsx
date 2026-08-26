@@ -237,7 +237,7 @@ export default function Page() {
           <h2>피드를 가져오는 방법</h2>
           <div className="upload-note"><span>이 기기에 저장돼요</span><button type="button" aria-label="사진 저장 안내" aria-describedby="upload-note-detail">?</button><span id="upload-note-detail" role="tooltip">다음에 다시 열어도 그대로 남아 있어요.</span></div>
           {message && <div className="error" role="alert">{message}</div>}
-          <label className="upload-option upload-option-featured"><span className="upload-option-mark">▦</span><span className="upload-option-copy"><b>인스타 프로필 캡처</b><small>한 장 올리면 자동으로 나눠요.</small></span><span className="upload-option-arrow">↑</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label>
+          <label className="upload-option upload-option-featured"><span className="upload-option-mark"><GridMark /></span><span className="upload-option-copy"><b>인스타 프로필 캡처</b><small>한 장 올리면 자동으로 나눠요.</small></span><span className="upload-option-arrow">↑</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label>
           <label className="upload-option"><span className="upload-option-mark">＋</span><span className="upload-option-copy"><b>사진 직접 올리기</b><small>첫 장 이미지를 여러 장 선택해요.</small></span><span className="upload-option-arrow">↑</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={choosePhotos} /></label>
         </section>
         <section className="install-tip" aria-label="홈 화면에 추가하는 방법">

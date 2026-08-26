@@ -47,6 +47,7 @@ h1 { margin:16px 0 13px; font-size:44px; line-height:1.04; letter-spacing:-.08em
 .upload-option { position:relative; display:flex !important; align-items:center; gap:11px; min-height:64px; margin:10px 0 0 !important; padding:10px 12px; border:1px solid var(--line); border-radius:14px; color:var(--ink) !important; background:var(--panel); cursor:pointer; }
 .upload-option-featured { border-color:var(--ink); color:#fff !important; background:var(--ink); }
 .upload-option-mark { width:30px; height:30px; display:grid; place-items:center; flex:none; border:1px solid currentColor; border-radius:9px; font-size:19px; line-height:1; }
+.upload-option-mark .grid-mark { width:20px; height:20px; gap:1px; }
 .upload-option-copy { min-width:0; display:grid; gap:3px; }
 .upload-option-copy b { font-size:12px; }
 .upload-option-copy small { color:var(--muted); font-size:10px; }
