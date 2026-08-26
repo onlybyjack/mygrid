@@ -1,6 +1,6 @@
 {
-  "name": "MyGrid",
-  "short_name": "MyGrid",
+  "name": "mygrid",
+  "short_name": "mygrid",
   "description": "Instagram 피드 미리보기",
   "start_url": "/",
   "display": "standalone",

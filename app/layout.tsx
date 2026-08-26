@@ -2,11 +2,11 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MyGrid",
+  title: "mygrid",
   description: "Instagram 피드 미리보기",
   manifest: "/manifest.json",
   icons: { apple: "/mygrid-icon.svg" },
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "MyGrid" },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "mygrid" },
 };
 
 export const viewport: Viewport = {
