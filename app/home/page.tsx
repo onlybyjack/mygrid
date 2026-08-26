@@ -152,7 +152,7 @@ export default function Page() {
       event.target.value = "";
       return;
     }
-    const nextDrafts = selected.map((file, index) => ({ id: `draft-${Date.now()}-${index}`, image: URL.createObjectURL(file), draft: true }));
+    const nextDrafts = [...drafts, ...selected.map((file, index) => ({ id: `draft-${Date.now()}-${index}-${globalThis.crypto.randomUUID()}`, image: URL.createObjectURL(file), draft: true }))];
     setDrafts(nextDrafts);
     setMessage("");
     setPreview(true);
@@ -234,7 +234,7 @@ export default function Page() {
         <h1>사진을 골라<br />그리드로 채워보세요.</h1>
         <p className="lead">한 번만 올리면, 나만의 피드가 완성돼요.</p>
         <section className="connect-card upload-card" onPaste={pasteGridScreenshot} tabIndex={0}>
-          <h2>피드를 가져오는 방법</h2>
+          <h2>어떻게 시작할까요?</h2>
           {message && <div className="error" role="alert">{message}</div>}
           <label className="upload-option upload-option-featured"><span className="upload-option-mark"><GridMark uniform /></span><span className="upload-option-copy"><b>인스타 프로필 캡처</b><small>한 장 올리면 자동으로 나눠요.</small></span><span className="upload-option-arrow">↑</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label>
           <label className="upload-option"><span className="upload-option-mark">＋</span><span className="upload-option-copy"><b>사진 직접 올리기</b><small>첫 장 이미지를 여러 장 선택해요.</small></span><span className="upload-option-arrow">↑</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={choosePhotos} /></label>
