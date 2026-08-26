@@ -1,0 +1,18 @@
+{
+  "name": "MyGrid",
+  "short_name": "MyGrid",
+  "description": "Instagram 피드 미리보기",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F7F4EC",
+  "theme_color": "#EFB4C5",
+  "icons": [
+    {
+      "src": "/mygrid-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

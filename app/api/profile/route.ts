@@ -1,0 +1,100 @@
+import { NextResponse } from "next/server";
+
+export const runtime = "nodejs";
+
+const INSTAGRAM_APP_ID = "936619743392459";
+const USERNAME_PATTERN = /^[a-zA-Z0-9._]{1,30}$/;
+
+type InstagramUser = {
+  username?: unknown;
+  full_name?: unknown;
+  profile_pic_url?: unknown;
+  follower_count?: unknown;
+  following_count?: unknown;
+  edge_followed_by?: { count?: unknown };
+  edge_follow?: { count?: unknown };
+  edge_owner_to_timeline_media?: {
+    page_info?: { has_next_page?: unknown };
+    edges?: Array<{ node?: InstagramMedia }>;
+  };
+};
+
+type InstagramMedia = {
+  id?: unknown;
+  shortcode?: unknown;
+  display_url?: unknown;
+  thumbnail_src?: unknown;
+  is_video?: unknown;
+};
+
+function count(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function string(value: unknown) {
+  return typeof value === "string" && value ? value : undefined;
+}
+
+function readUser(payload: unknown): InstagramUser | null {
+  if (!payload || typeof payload !== "object") return null;
+  const root = payload as Record<string, unknown>;
+  const direct = root.data && typeof root.data === "object" ? (root.data as Record<string, unknown>).user : undefined;
+  if (direct && typeof direct === "object") return direct as InstagramUser;
+  if (root.user && typeof root.user === "object") return root.user as InstagramUser;
+  return null;
+}
+
+export async function GET(request: Request) {
+  const username = new URL(request.url).searchParams.get("username")?.trim().replace(/^@/, "") || "";
+  if (!USERNAME_PATTERN.test(username)) {
+    return NextResponse.json({ error: "올바른 Instagram 사용자 아이디를 입력하세요." }, { status: 400 });
+  }
+
+  try {
+    const response = await fetch(
+      `https://www.instagram.com/api/v1/users/web_profile_info/?username=${encodeURIComponent(username)}`,
+      {
+        cache: "no-store",
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "Mozilla/5.0 (compatible; MyGrid/1.0)",
+          "X-IG-App-ID": INSTAGRAM_APP_ID,
+          Referer: `https://www.instagram.com/${encodeURIComponent(username)}/`,
+        },
+      },
+    );
+    if (!response.ok) {
+      if (response.status === 404) return NextResponse.json({ error: "Instagram 프로필을 찾지 못했습니다." }, { status: 404 });
+      throw new Error(`Instagram responded with ${response.status}`);
+    }
+
+    const user = readUser(await response.json());
+    if (!user || string(user.username)?.toLowerCase() !== username.toLowerCase()) {
+      return NextResponse.json({ error: "공개 Instagram 프로필만 가져올 수 있습니다." }, { status: 404 });
+    }
+
+    const media = user.edge_owner_to_timeline_media;
+    const posts = (media?.edges || []).flatMap(({ node }, index) => {
+      if (!node) return [];
+      const image = string(node.display_url) || string(node.thumbnail_src);
+      if (!image) return [];
+      return [{ id: string(node.id) || string(node.shortcode) || `post-${index}`, image }];
+    });
+    const followers = count(user.follower_count) ?? count(user.edge_followed_by?.count);
+    const following = count(user.following_count) ?? count(user.edge_follow?.count);
+
+    return NextResponse.json({
+      username: string(user.username) || username,
+      profile: {
+        fullName: string(user.full_name),
+        avatar: string(user.profile_pic_url),
+        ...(followers === undefined ? {} : { followers }),
+        ...(following === undefined ? {} : { following }),
+      },
+      posts,
+      partial: media?.page_info?.has_next_page === true,
+    });
+  } catch {
+    return NextResponse.json({ error: "Instagram 프로필을 불러오지 못했습니다. 잠시 후 다시 시도하세요." }, { status: 502 });
+  }
+}
