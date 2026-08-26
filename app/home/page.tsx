@@ -239,17 +239,20 @@ export default function Page() {
     longPressTimer.current = window.setTimeout(() => {
       setDraggedPostId(postId);
       suppressTileClick.current = true;
-      const handleMove = (moveEvent: PointerEvent) => {
-        if (moveEvent.pointerId !== event.pointerId) return;
+      const handleMove = (moveEvent: Event) => {
+        const point = moveEvent as MouseEvent;
+        if (point.clientX === undefined || point.clientY === undefined) return;
         moveEvent.preventDefault();
-        const target = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
+        const target = document.elementFromPoint(point.clientX, point.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
         setDragOverPostId(target || null);
       };
-      const handleUp = (upEvent: PointerEvent) => {
-        if (upEvent.pointerId !== event.pointerId) return;
+      const handleUp = (upEvent: Event) => {
+        const point = upEvent as MouseEvent;
         document.removeEventListener("pointermove", handleMove);
         document.removeEventListener("pointercancel", handleUp);
-        const target = document.elementFromPoint(upEvent.clientX, upEvent.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
+        document.removeEventListener("mousemove", handleMove);
+        document.removeEventListener("mouseup", handleUp);
+        const target = document.elementFromPoint(point.clientX, point.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
         const from = drafts.findIndex((post) => post.id === postId);
         const to = drafts.findIndex((post) => post.id === target);
         if (target && target !== postId && from >= 0 && to >= 0) {
@@ -266,6 +269,8 @@ export default function Page() {
       document.addEventListener("pointermove", handleMove, { passive: false });
       document.addEventListener("pointerup", handleUp, { once: true });
       document.addEventListener("pointercancel", handleUp, { once: true });
+      document.addEventListener("mousemove", handleMove, { passive: false });
+      document.addEventListener("mouseup", handleUp, { once: true });
     }, 450);
   }
 
