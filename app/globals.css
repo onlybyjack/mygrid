@@ -27,7 +27,7 @@ h1 { margin:16px 0 13px; font-size:44px; line-height:1.04; letter-spacing:-.08em
 .connect-card h2 { margin:0 0 5px; font-size:18px; letter-spacing:-.04em; }
 .connect-card p { margin:0 0 24px; color:var(--muted); font-size:12px; }
 .connect-card label { display:block; margin-bottom:8px; color:var(--muted); font-size:11px; }
-.connect-card label.upload-submit { color:#fff; }
+.connect-card label.upload-submit { display:flex; color:#fff; }
 .input-row { display:flex; align-items:center; min-height:46px; border-bottom:1px solid var(--ink); }
 .input-row span { color:var(--orange); font-size:20px; }
 .input-row input { width:100%; padding:12px 10px; border:0; outline:0; color:var(--ink); background:transparent; font-size:16px; }
