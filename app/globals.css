@@ -14,12 +14,8 @@ button { cursor:pointer; }
 @keyframes splash-pop { from { opacity:0; transform:scale(.8); } to { opacity:1; transform:scale(1); } }
 @keyframes splash-fade { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
 .onboarding-page { width:100%; max-width:620px; min-height:100svh; min-height:100dvh; display:flex; flex-direction:column; overflow:hidden; margin:0 auto; background:var(--paper); }
-.onboarding-header { height:68px; flex:none; display:flex; align-items:center; justify-content:space-between; padding:0 22px; border-bottom:1px solid var(--line); }
-.onboarding-header .brand { gap:9px; font-size:18px; }
-.onboarding-header .logo { width:34px; height:34px; border-radius:9px; }
-.onboarding-header .logo .grid-mark { width:21px; height:21px; }
-.onboarding-header > span { color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.1em; }
-.onboarding-screen { position:relative; flex:1; min-height:calc(100dvh - 68px); display:flex; flex-direction:column; padding:clamp(42px, 8vh, 86px) 24px max(24px, env(safe-area-inset-bottom)); }
+.onboarding-screen { position:relative; flex:1; min-height:100dvh; display:flex; flex-direction:column; padding:clamp(42px, 8vh, 86px) 24px max(24px, env(safe-area-inset-bottom)); }
+.onboarding-capture { padding-top:78px; }
 .onboarding-copy small { color:var(--muted); font-size:10px; font-weight:800; letter-spacing:.14em; }
 .onboarding-copy h1 { margin:17px 0 17px; font-size:clamp(34px, 9vw, 54px); line-height:1.08; letter-spacing:-.1em; }
 .onboarding-copy p { margin:0; color:var(--muted); font-size:14px; line-height:1.6; }

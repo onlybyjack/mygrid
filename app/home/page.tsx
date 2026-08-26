@@ -643,7 +643,6 @@ export default function Page() {
 
   if (!preview) {
     return <main className="onboarding-page" onPaste={homeStep === 2 ? pasteGridScreenshot : undefined}>
-      <header className="onboarding-header"><div className="brand"><div className="logo"><GridMark /></div><strong>mygrid</strong></div><span>{String(homeStep).padStart(2, "0")} / 02</span></header>
       {homeStep === 1 ? <section className="onboarding-screen onboarding-identity" aria-labelledby="identity-title">
         <div className="onboarding-copy"><small>01 / 02 · IDENTITY</small><h1 id="identity-title">인스타 아이디를<br />알려주세요.</h1><p>피드 상단에 표시할 이름이에요.<br />나중에 다시 바꿀 수 있어요.</p></div>
         <div className="onboarding-bottom"><label className="onboarding-input-label" htmlFor="onboarding-username">Instagram 아이디 <em>선택 입력</em></label><div className="onboarding-input"><b>@</b><input id="onboarding-username" value={username} onChange={(event) => updateUsername(event.target.value)} placeholder="아이디를 입력해 주세요" autoCapitalize="none" autoCorrect="off" /></div><button className="onboarding-primary" type="button" onClick={continueToScreenshot}><b>다음</b><span>→</span></button><button className="onboarding-text-button" type="button" onClick={continueToScreenshot}>건너뛰기</button></div>
