@@ -28,6 +28,16 @@ h1 { margin:16px 0 13px; font-size:44px; line-height:1.04; letter-spacing:-.08em
 .connect-card p { margin:0 0 24px; color:var(--muted); font-size:12px; }
 .connect-card label { display:block; margin-bottom:8px; color:var(--muted); font-size:11px; }
 .connect-card label.upload-submit { display:flex; color:#fff; }
+.identity-fields { display:grid; gap:10px; margin:18px 0 14px; }
+.identity-fields label { margin:0 !important; color:var(--muted); }
+.identity-fields label > span { display:block; margin-bottom:5px; font-size:11px; }
+.identity-fields label > span small { color:#a8a8a6; font-size:10px; }
+.handle-input, .identity-fields label > input { width:100%; min-height:38px; border:1px solid var(--line); border-radius:10px; color:var(--ink); background:var(--paper); }
+.handle-input { display:flex; align-items:center; }
+.handle-input b { padding-left:11px; color:var(--muted); font-size:16px; font-weight:500; }
+.handle-input input { min-width:0; flex:1; padding:9px 10px; border:0; outline:0; color:var(--ink); background:transparent; font-size:13px; }
+.identity-fields input::placeholder { color:#a8a8a6; }
+.identity-fields label > input { padding:9px 10px; outline:0; font-size:13px; }
 .input-row { display:flex; align-items:center; min-height:46px; border-bottom:1px solid var(--ink); }
 .input-row span { color:var(--orange); font-size:20px; }
 .input-row input { width:100%; padding:12px 10px; border:0; outline:0; color:var(--ink); background:transparent; font-size:16px; }
