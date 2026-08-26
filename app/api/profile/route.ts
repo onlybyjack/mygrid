@@ -7,6 +7,7 @@ const USERNAME_PATTERN = /^[a-zA-Z0-9._]{1,30}$/;
 
 type InstagramUser = {
   username?: unknown;
+  is_private?: unknown;
   full_name?: unknown;
   profile_pic_url?: unknown;
   follower_count?: unknown;
@@ -65,12 +66,16 @@ export async function GET(request: Request) {
     );
     if (!response.ok) {
       if (response.status === 404) return NextResponse.json({ error: "Instagram 프로필을 찾지 못했습니다." }, { status: 404 });
+      if (response.status === 403) return NextResponse.json({ error: "비공개 계정은 피드를 가져올 수 없어요. Instagram에서 공개 계정으로 전환한 뒤 다시 시도해 주세요." }, { status: 403 });
       throw new Error(`Instagram responded with ${response.status}`);
     }
 
     const user = readUser(await response.json());
     if (!user || string(user.username)?.toLowerCase() !== username.toLowerCase()) {
       return NextResponse.json({ error: "공개 Instagram 프로필만 가져올 수 있습니다." }, { status: 404 });
+    }
+    if (user.is_private === true) {
+      return NextResponse.json({ error: "비공개 계정은 피드를 가져올 수 없어요. Instagram에서 공개 계정으로 전환한 뒤 다시 시도해 주세요." }, { status: 403 });
     }
 
     const media = user.edge_owner_to_timeline_media;
