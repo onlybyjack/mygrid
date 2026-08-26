@@ -102,7 +102,6 @@ function TrashIcon() {
 export default function Page() {
   const [preview, setPreview] = useState(false);
   const [username, setUsername] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [drafts, setDrafts] = useState<Post[]>([]);
   const [message, setMessage] = useState("");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -114,10 +113,9 @@ export default function Page() {
     let mounted = true;
     let savedUsername = "";
     try {
-      const identity = JSON.parse(localStorage.getItem(IDENTITY_KEY) || "{}") as { username?: unknown; displayName?: unknown };
+      const identity = JSON.parse(localStorage.getItem(IDENTITY_KEY) || "{}") as { username?: unknown };
       savedUsername = typeof identity.username === "string" ? identity.username : "";
       setUsername(savedUsername);
-      setDisplayName(typeof identity.displayName === "string" ? identity.displayName : "");
     } catch {
       localStorage.removeItem(IDENTITY_KEY);
     }
@@ -157,19 +155,14 @@ export default function Page() {
 
   const allPosts = drafts;
 
-  function saveIdentity(nextUsername: string, nextDisplayName: string) {
-    localStorage.setItem(IDENTITY_KEY, JSON.stringify({ username: nextUsername, displayName: nextDisplayName }));
+  function saveIdentity(nextUsername: string) {
+    localStorage.setItem(IDENTITY_KEY, JSON.stringify({ username: nextUsername }));
   }
 
   function updateUsername(value: string) {
     const next = value.replace(/^@+/, "");
     setUsername(next);
-    saveIdentity(next, displayName);
-  }
-
-  function updateDisplayName(value: string) {
-    setDisplayName(value);
-    saveIdentity(username, value);
+    saveIdentity(next);
   }
 
   function choosePhotos(event: ChangeEvent<HTMLInputElement>) {
@@ -276,8 +269,7 @@ export default function Page() {
         <section className="connect-card upload-card" onPaste={pasteGridScreenshot} tabIndex={0}>
           <h2>어떻게 시작할까요?</h2>
           <div className="identity-fields">
-            <label><span>Instagram 아이디</span><div className="handle-input"><b>@</b><input value={username} onChange={(event) => updateUsername(event.target.value)} placeholder="아이디 입력" autoCapitalize="none" autoCorrect="off" /></div></label>
-            <label><span>표시 이름 <small>선택</small></span><input value={displayName} onChange={(event) => updateDisplayName(event.target.value)} placeholder="프로필에 보여줄 이름" /></label>
+            <label><span>Instagram 아이디</span><div className="handle-input"><b>@</b><input value={username} onChange={(event) => updateUsername(event.target.value)} placeholder="아이디" autoCapitalize="none" autoCorrect="off" /></div></label>
           </div>
           {message && <div className="error" role="alert">{message}</div>}
           <label className="upload-option upload-option-featured"><span className="upload-option-mark"><GridMark uniform /></span><span className="upload-option-copy"><b>인스타 프로필 캡처</b><small>한 장 올리면 자동으로 나눠요.</small></span><span className="upload-option-arrow">↑</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label>
@@ -307,7 +299,7 @@ export default function Page() {
     <header className="profile-bar"><button type="button" aria-label="뒤로 가기" onClick={() => setPreview(false)}>‹</button><strong>@{username || "mygrid"}</strong></header>
     <section className="profile-scroll">
       <div className="profile-summary"><div className="avatar"><GridMark /></div><div className="stat"><b>{allPosts.length}</b><small>게시물</small></div><div className="stat"><b>—</b><small>팔로워</small></div><div className="stat"><b>—</b><small>팔로잉</small></div></div>
-      <h2 className="profile-name">{displayName || username || "mygrid"}</h2>
+      <h2 className="profile-name">{username || "mygrid"}</h2>
       <div className="profile-tabs"><span className="selected">▦</span></div>
       {allPosts.length ? <div className="grid">{Array.from({ length: Math.ceil(allPosts.length / 3) }, (_, row) => <div className="grid-row" key={row}>{[0, 1, 2].map((column) => { const post = allPosts[row * 3 + column]; return post ? <button className="tile" type="button" key={post.id} onClick={() => setSelectedPost(post)} aria-label="게시물 크게 보기"><img src={mediaUrl(post.image)} alt="게시물" /></button> : <div className="tile placeholder" key={`empty-${row}-${column}`} />; })}</div>)}</div> : <div className="empty"><b>피드가 기다리고 있어요</b><small>사진을 추가해 나만의 그리드를 만들어 보세요.</small></div>}
     </section>
