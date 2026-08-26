@@ -140,7 +140,10 @@ async function readBrowserProfile(username: string) {
       const found = title.toLowerCase().includes(requestedUsername.toLowerCase()) || Boolean(avatar) || media.length > 0;
       return { avatar, media, found, isPrivate: /this account is private|비공개 계정/i.test(body) };
     }, username);
-    if (!profile.found) return { user: null, found: false };
+    if (!profile.found) {
+      console.error("Chromium profile page had no profile payload", { title: await page.title(), url: page.url() });
+      return { user: null, found: false };
+    }
     return {
       user: {
         username,
@@ -163,6 +166,7 @@ export async function GET(request: Request) {
 
   try {
     let user: InstagramUser | null = null;
+    const sourceStatuses: string[] = [];
     for (const host of ["www.instagram.com", "i.instagram.com"]) {
       if (user) break;
       try {
@@ -185,6 +189,7 @@ export async function GET(request: Request) {
             },
           },
         );
+        sourceStatuses.push(`${host}:${response.status}`);
         if (!response.ok) continue;
         try { user = readUser(await response.json()); } catch { /* Try the next Instagram host. */ }
         if (user) break;
@@ -195,6 +200,7 @@ export async function GET(request: Request) {
       const fallback = await readHtmlProfile(username);
       user = fallback.user;
       htmlFound = fallback.found;
+      sourceStatuses.push(`html:${htmlFound ? "profile" : "none"}`);
     }
     if (!user) {
       try {
@@ -205,7 +211,10 @@ export async function GET(request: Request) {
         console.error("Chromium profile scraper failed", error instanceof Error ? error.message : String(error));
       }
     }
-    if (!user) return NextResponse.json({ error: htmlFound ? "Instagram 프로필을 찾지 못했습니다." : "Instagram 프로필을 불러오지 못했습니다. 잠시 후 다시 시도하세요." }, { status: htmlFound ? 404 : 502 });
+    if (!user) {
+      console.error("Instagram profile sources exhausted", sourceStatuses);
+      return NextResponse.json({ error: htmlFound ? "Instagram 프로필을 찾지 못했습니다." : "Instagram 프로필을 불러오지 못했습니다. 잠시 후 다시 시도하세요." }, { status: htmlFound ? 404 : 502 });
+    }
     if (!user || string(user.username)?.toLowerCase() !== username.toLowerCase()) {
       return NextResponse.json({ error: "공개 Instagram 프로필만 가져올 수 있습니다." }, { status: 404 });
     }
