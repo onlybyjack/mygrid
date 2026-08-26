@@ -490,19 +490,20 @@ export default function Page() {
 
   if (!preview) {
     return <main className="connect-page">
-      <header className="brand-row"><div className="brand"><div className="logo"><GridMark /></div><strong>mygrid</strong></div></header>
+      <header className="brand-row"><div className="brand"><div className="logo"><GridMark /></div><strong>mygrid</strong></div><small className="brand-note">GRID PLANNER</small></header>
       <section className="connect-content">
-        <h1>사진을 골라<br />그리드로 채워보세요.</h1>
-        <p className="lead">한 번만 올리면, 나만의 피드가 완성돼요.</p>
+        <p className="hero-kicker">INSTAGRAM GRID ORGANIZER</p>
+        <h1>내 피드를<br /><span>깔끔하게 정리해보세요.</span></h1>
+        <p className="lead">프로필 캡처 한 장이면<br />나만의 그리드를 미리 볼 수 있어요.</p>
         <section className="connect-card upload-card" onPaste={pasteGridScreenshot} tabIndex={0}>
-          <h2>어떻게 시작할까요?</h2>
+          <div className="card-heading"><small>01 / START</small><h2>프로필을 불러올까요?</h2></div>
           <div className="identity-fields">
-            <label><span>Instagram 아이디</span><div className="handle-input"><b>@</b><input value={username} onChange={(event) => updateUsername(event.target.value)} placeholder="아이디" autoCapitalize="none" autoCorrect="off" /></div></label>
+            <label><span>Instagram 아이디 <em>선택 입력</em></span><div className="handle-input"><b>@</b><input value={username} onChange={(event) => updateUsername(event.target.value)} placeholder="프로필에 표시할 이름" autoCapitalize="none" autoCorrect="off" /></div></label>
           </div>
           {message && <div className="error" role="alert">{message}</div>}
           <label className="upload-option upload-option-featured"><span className="upload-option-mark"><GridMark uniform /></span><span className="upload-option-copy"><b>인스타 프로필 캡처</b><small>한 장 올리면 자동으로 나눠요.</small></span><span className="upload-option-arrow">↑</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label>
+          <button className="primary start-button" type="button" onClick={startEmptyProfile}><b>빈 피드로 바로 시작</b><span>→</span></button>
         </section>
-        <button className="primary start-button" type="button" onClick={startEmptyProfile}><b>바로 시작하기</b><span>→</span></button>
         <section className="install-tip" aria-label="홈 화면에 추가하는 방법">
           <div className="tip-heading"><div><small>TIP</small><h2>앱으로 더 편하게</h2><p>마이그리드를 홈 화면에 추가해 보세요.</p></div><b>{String(activeTip + 1).padStart(2, "0")} / {String(INSTALL_TIPS.length).padStart(2, "0")}</b></div>
           <div className="tip-slider" onTouchStart={startTipSwipe} onTouchEnd={endTipSwipe}>
