@@ -107,8 +107,12 @@ export async function GET(request: Request) {
 
   try {
     let user: InstagramUser | null = null;
-    const scraper = await readScraperApiProfile(username);
-    user = scraper.user;
+    try {
+      const scraper = await readScraperApiProfile(username);
+      user = scraper.user;
+    } catch {
+      // A provider outage must not prevent the direct fallbacks below.
+    }
     for (const host of ["www.instagram.com", "i.instagram.com"]) {
       if (user) break;
       try {
