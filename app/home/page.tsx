@@ -1,11 +1,17 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, TouchEvent, useEffect, useMemo, useRef, useState } from "react";
 import { deleteDraftPhoto, readDraftPhotos, saveDraftPhotos } from "../../lib/instagram-export";
 
 type Post = { id: string; image: string; draft?: boolean };
 type Profile = { fullName?: string; avatar?: string; followers?: number; following?: number };
 type SavedProfile = { username: string; posts: Post[]; profile: Profile; partial?: boolean };
+
+const INSTALL_TIPS = [
+  { kind: "ios", platform: "iPhone · Safari", title: "공유 버튼을 눌러보세요", description: "Safari 하단의 공유 아이콘을 선택하세요." },
+  { kind: "android", platform: "Android · Chrome", title: "홈 화면에 추가를 선택하세요", description: "메뉴에서 ‘홈 화면에 추가’를 누르면 끝이에요." },
+  { kind: "done", platform: "mygrid 앱", title: "이제 앱처럼 열어보세요", description: "홈 화면의 mygrid 아이콘에서 바로 시작할 수 있어요." },
+] as const;
 
 const PROFILE_KEY = "mygrid:web-profile";
 
@@ -66,6 +72,8 @@ export default function Page() {
   const [message, setMessage] = useState("");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [activeTip, setActiveTip] = useState(0);
+  const tipStartX = useRef<number | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -94,6 +102,11 @@ export default function Page() {
 
   useEffect(() => {
     if ("serviceWorker" in navigator) void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setActiveTip((current) => (current + 1) % INSTALL_TIPS.length), 5000);
+    return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -172,6 +185,22 @@ export default function Page() {
     }
   }
 
+  function moveTip(direction: number) {
+    setActiveTip((current) => (current + direction + INSTALL_TIPS.length) % INSTALL_TIPS.length);
+  }
+
+  function startTipSwipe(event: TouchEvent<HTMLDivElement>) {
+    tipStartX.current = event.touches[0]?.clientX ?? null;
+  }
+
+  function endTipSwipe(event: TouchEvent<HTMLDivElement>) {
+    if (tipStartX.current === null) return;
+    const distance = (event.changedTouches[0]?.clientX ?? tipStartX.current) - tipStartX.current;
+    tipStartX.current = null;
+    if (Math.abs(distance) < 40) return;
+    moveTip(distance < 0 ? 1 : -1);
+  }
+
   if (!hydrated) {
     return <main className="splash-page" aria-label="MyGrid 불러오는 중" aria-busy="true">
       <div className="splash-logo">M</div>
@@ -191,6 +220,21 @@ export default function Page() {
           {message && <div className="error" role="alert">{message}</div>}
           <button className="primary" type="submit" disabled={loading}><b>{loading ? "피드 불러오는 중…" : "피드 가져오기"}</b><span>↑</span></button>
         </form>
+        <section className="install-tip" aria-label="홈 화면에 추가하는 방법">
+          <div className="tip-heading"><div><small>TIP</small><h2>앱처럼 더 편하게</h2><p>마이그리드를 홈 화면에 추가해 보세요.</p></div><b>{String(activeTip + 1).padStart(2, "0")} / {String(INSTALL_TIPS.length).padStart(2, "0")}</b></div>
+          <div className="tip-slider" onTouchStart={startTipSwipe} onTouchEnd={endTipSwipe}>
+            {(() => { const tip = INSTALL_TIPS[activeTip]; return <article className={`tip-slide tip-${tip.kind}`} key={tip.kind}>
+              <div className="tip-copy"><small>{tip.platform}</small><strong>{tip.title}</strong><p>{tip.description}</p></div>
+              <div className="tip-visual" aria-hidden="true">
+                <div className="tip-device-bar"><i /> <span>{tip.kind === "ios" ? "Safari" : tip.kind === "android" ? "Chrome" : "mygrid"}</span><i /></div>
+                {tip.kind === "ios" && <><div className="tip-screen-lines"><i /><i /><i /></div><div className="tip-share">↑</div></>}
+                {tip.kind === "android" && <><div className="tip-screen-lines"><i /><i /><i /></div><div className="tip-menu-item"><span>＋</span> 홈 화면에 추가</div></>}
+                {tip.kind === "done" && <div className="tip-app-icon">M<small>mygrid</small></div>}
+              </div>
+            </article>; })()}
+          </div>
+          <div className="tip-footer"><div className="tip-dots">{INSTALL_TIPS.map((tip, index) => <button key={tip.kind} type="button" className={index === activeTip ? "active" : ""} aria-label={`${index + 1}단계 보기`} aria-current={index === activeTip} onClick={() => setActiveTip(index)} />)}</div><span>좌우로 넘겨보기</span></div>
+        </section>
       </section>
     </main>;
   }
