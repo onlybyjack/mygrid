@@ -121,7 +121,10 @@ h1 span { white-space:nowrap; }
 .profile-bar button { width:26px; justify-self:start; padding:0; border:0; color:var(--ink); background:transparent; font-size:37px; font-weight:300; line-height:1; }
 .profile-add-button { width:32px; height:32px; display:grid; place-items:center; justify-self:start; color:var(--ink); font-size:31px; font-weight:300; line-height:1; cursor:pointer; }
 .profile-add-button input { display:none; }
-.profile-bar strong { justify-self:center; font-size:16px; }
+.profile-identity { display:flex; align-items:baseline; justify-self:center; gap:7px; }
+.profile-username, .profile-edit-button { min-height:32px; padding:0; border:0; color:var(--ink); background:transparent; font:inherit; }
+.profile-username { font-size:16px; font-weight:700; }
+.profile-edit-button { color:var(--muted); font-size:11px; text-decoration:underline; text-underline-offset:3px; }
 .profile-scroll { flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
 .profile-summary { display:flex; align-items:center; justify-content:space-between; padding:18px 18px 0; }
 .avatar { width:82px; height:82px; display:grid; place-items:center; overflow:hidden; border:1px solid var(--line); border-radius:50%; color:#8a929c; background:#eef0f3; font-size:38px; }
@@ -132,7 +135,7 @@ h1 span { white-space:nowrap; }
 .profile-name { margin:11px 19px 0; font-size:14px; }
 .profile-tabs { height:57px; display:grid; margin-top:16px; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
 .profile-tab { display:grid; place-items:center; color:var(--muted); }
-.profile-tab .grid-mark { width:24px; height:24px; gap:2px; opacity:.35; }
+.profile-tab .grid-mark { width:24px; height:24px; gap:2px; opacity:.5; }
 .profile-tab .grid-mark i { display:block; background:var(--ink); }
 .profile-tab.selected { color:var(--ink); border-bottom:2px solid var(--ink); }
 .grid-row { display:flex; gap:2px; }
