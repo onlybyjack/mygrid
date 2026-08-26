@@ -123,7 +123,7 @@ export default function Page() {
       <header className="brand-row"><div className="brand"><div className="logo"><GridMark /></div><strong>mygrid</strong></div></header>
       <section className="connect-content">
         <h1>사진을 골라<br />그리드로 채워보세요.</h1>
-        <p className="lead">첫 장 이미지만 골라<br />한 번에 올리면 충분해요.</p>
+        <p className="lead">첫 장 이미지만 골라 한 번에 올리면 충분해요.</p>
         <section className="connect-card upload-card">
           <h2>처음 한 번만 올려주세요</h2>
           <p>사진을 여러 장 고르면 게시물처럼 정리돼요.</p>
