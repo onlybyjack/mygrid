@@ -144,6 +144,8 @@ export default function Page() {
   const [editorOffsetY, setEditorOffsetY] = useState(0);
   const [editorPreviewUrl, setEditorPreviewUrl] = useState("");
   const editedFilesRef = useRef<File[]>([]);
+  const editorPointers = useRef(new Map<number, { x: number; y: number }>());
+  const editorGesture = useRef<{ startX: number; startY: number; baseX: number; baseY: number; distance: number; zoom: number } | null>(null);
   const draftsRef = useRef<Post[]>([]);
   const tipStartX = useRef<number | null>(null);
   const longPressTimer = useRef<number | null>(null);
@@ -265,6 +267,48 @@ export default function Page() {
     setEditorFiles([]);
     setMessage("");
     setPreview(true);
+  }
+
+  function clampEditorOffset(value: number) {
+    return Math.max(-1, Math.min(1, value));
+  }
+
+  function editorPointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    editorPointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (editorPointers.current.size === 1) {
+      editorGesture.current = { startX: event.clientX, startY: event.clientY, baseX: editorOffsetX, baseY: editorOffsetY, distance: 0, zoom: editorZoom };
+    } else if (editorPointers.current.size === 2) {
+      const points = [...editorPointers.current.values()];
+      editorGesture.current = { startX: 0, startY: 0, baseX: editorOffsetX, baseY: editorOffsetY, distance: Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y), zoom: editorZoom };
+    }
+  }
+
+  function editorPointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const previous = editorPointers.current.get(event.pointerId);
+    if (!previous || !editorGesture.current) return;
+    editorPointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const points = [...editorPointers.current.values()];
+    if (points.length === 1) {
+      const stage = event.currentTarget.getBoundingClientRect();
+      setEditorOffsetX(clampEditorOffset(editorGesture.current.baseX + (event.clientX - editorGesture.current.startX) / stage.width * 2));
+      setEditorOffsetY(clampEditorOffset(editorGesture.current.baseY + (event.clientY - editorGesture.current.startY) / stage.height * 2));
+    } else if (points.length === 2 && editorGesture.current.distance > 0) {
+      const distance = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y);
+      setEditorZoom(Math.max(1, Math.min(2.5, editorGesture.current.zoom * distance / editorGesture.current.distance)));
+    }
+  }
+
+  function editorPointerUp(event: React.PointerEvent<HTMLDivElement>) {
+    editorPointers.current.delete(event.pointerId);
+    editorGesture.current = null;
+    try { event.currentTarget.releasePointerCapture(event.pointerId); } catch { /* Pointer capture is already released. */ }
+  }
+
+  function editorWheel(event: React.WheelEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setEditorZoom((zoom) => Math.max(1, Math.min(2.5, zoom - event.deltaY * 0.002)));
   }
 
   function choosePhotos(event: ChangeEvent<HTMLInputElement>) {
@@ -504,6 +548,6 @@ export default function Page() {
         <button className="viewer-delete" type="button" onClick={() => removePost(selectedPost.id)} aria-label="게시물 삭제" title="게시물 삭제"><TrashIcon /></button>
       </div>
     </div>}
-    {editorFiles.length > 0 && editorPreviewUrl && <div className="photo-editor" role="dialog" aria-modal="true" aria-label="사진 편집"><div className="editor-panel"><div className="editor-heading"><b>사진 편집</b><span>{editorIndex + 1} / {editorFiles.length}</span><button type="button" onClick={() => setEditorFiles([])}>취소</button></div><div className={`crop-stage crop-${editorAspect}`}><img src={editorPreviewUrl} alt="편집할 사진" style={{ transform: `scale(${editorZoom}) translate(${editorOffsetX * 12}%, ${editorOffsetY * 12}%)` }} /></div><div className="aspect-buttons"><button type="button" className={editorAspect === "portrait" ? "active" : ""} onClick={() => setEditorAspect("portrait")}>세로 3:4</button><button type="button" className={editorAspect === "square" ? "active" : ""} onClick={() => setEditorAspect("square")}>정사각형</button><button type="button" className={editorAspect === "landscape" ? "active" : ""} onClick={() => setEditorAspect("landscape")}>가로 4:3</button></div><label className="editor-range">확대 <input type="range" min="1" max="2.5" step="0.01" value={editorZoom} onChange={(event) => setEditorZoom(Number(event.target.value))} /></label><label className="editor-range">가로 위치 <input type="range" min="-1" max="1" step="0.01" value={editorOffsetX} onChange={(event) => setEditorOffsetX(Number(event.target.value))} /></label><label className="editor-range">세로 위치 <input type="range" min="-1" max="1" step="0.01" value={editorOffsetY} onChange={(event) => setEditorOffsetY(Number(event.target.value))} /></label><button className="editor-confirm" type="button" onClick={() => void confirmCrop()}>{editorIndex + 1 < editorFiles.length ? "다음 사진" : "사진 추가"}</button></div></div>}
+    {editorFiles.length > 0 && editorPreviewUrl && <div className="photo-editor" role="dialog" aria-modal="true" aria-label="사진 편집"><div className="editor-panel"><div className="editor-heading"><b>사진 편집</b><span>{editorIndex + 1} / {editorFiles.length}</span><button type="button" onClick={() => setEditorFiles([])}>취소</button></div><div className={`crop-stage crop-${editorAspect}`} onPointerDown={editorPointerDown} onPointerMove={editorPointerMove} onPointerUp={editorPointerUp} onPointerCancel={editorPointerUp} onWheel={editorWheel}><img src={editorPreviewUrl} alt="편집할 사진" style={{ transform: `scale(${editorZoom}) translate(${editorOffsetX * 12}%, ${editorOffsetY * 12}%)` }} /></div><p className="editor-hint">사진을 끌어 구도를 맞추고, 두 손가락으로 확대하세요.</p><div className="aspect-buttons"><button type="button" className={editorAspect === "portrait" ? "active" : ""} onClick={() => setEditorAspect("portrait")}>세로 3:4</button><button type="button" className={editorAspect === "square" ? "active" : ""} onClick={() => setEditorAspect("square")}>정사각형</button><button type="button" className={editorAspect === "landscape" ? "active" : ""} onClick={() => setEditorAspect("landscape")}>가로 4:3</button></div><button className="editor-confirm" type="button" onClick={() => void confirmCrop()}>{editorIndex + 1 < editorFiles.length ? "다음 사진" : "사진 추가"}</button></div></div>}
   </>;
 }
