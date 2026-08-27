@@ -664,7 +664,7 @@ export default function Page() {
 
   return <>
     <main className="preview-page">
-    <header className="profile-bar"><label className="profile-add-button" aria-label="다음 사진 추가">＋<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={choosePhotos} /></label><div className="profile-identity"><button className="profile-username" type="button" aria-label="아이디 수정" onClick={editProfileIdentity}>{username || "mygrid"}</button></div><span aria-hidden="true" /></header>
+    <header className="profile-bar"><label className="profile-add-button" aria-label="다음 사진 추가">＋<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={choosePhotos} /></label><div className="profile-identity"><button className="profile-username" type="button" aria-label="아이디 수정" onClick={editProfileIdentity}>{username || "mygrid"}</button></div><label className="profile-migration-button" aria-label="인스타 프로필 캡처로 피드 채우기"><GridMark uniform /><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label></header>
     <section className="profile-scroll" onPointerMove={moveTile} onPointerUp={finishTilePress} onPointerCancel={cancelTilePress} onPaste={pasteGridScreenshot}>
       <div className="profile-summary"><div className="avatar" /><div className="stat"><b>{allPosts.length}</b><small>게시물</small></div><div className="stat"><b>—</b><small>팔로워</small></div><div className="stat"><b>—</b><small>팔로잉</small></div></div>
       <h2 className="profile-name">{username || "mygrid"}</h2>
