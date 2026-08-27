@@ -165,6 +165,10 @@ function BackIcon() {
   return <svg className="onboarding-back-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7" /></svg>;
 }
 
+function CaptureIcon() {
+  return <svg className="capture-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2" /><circle cx="8.5" cy="9.5" r="1.4" /><path d="m5.5 16 4-4 3 3 2-2 3.5 3M16 2.5v7m0-7-2.5 2.5M16 2.5l2.5 2.5" /></svg>;
+}
+
 export default function Page() {
   const [preview, setPreview] = useState(false);
   const [homeStep, setHomeStep] = useState<1 | 2>(1);
@@ -191,6 +195,7 @@ export default function Page() {
   const draftsRef = useRef<Post[]>([]);
   const longPressTimer = useRef<number | null>(null);
   const pressOrigin = useRef<{ x: number; y: number; pointerId: number } | null>(null);
+  const pressLastPoint = useRef<{ x: number; y: number; pointerId: number } | null>(null);
   const longPressPostIdRef = useRef<string | null>(null);
   const longPressMoved = useRef(false);
   const draggedPostIdRef = useRef<string | null>(null);
@@ -464,6 +469,7 @@ export default function Page() {
     const tile = event.currentTarget;
     const pointerId = event.pointerId;
     pressOrigin.current = { x: event.clientX, y: event.clientY, pointerId };
+    pressLastPoint.current = { x: event.clientX, y: event.clientY, pointerId };
     longPressTimer.current = window.setTimeout(() => {
       longPressPostIdRef.current = postId;
       longPressMoved.current = false;
@@ -531,7 +537,10 @@ export default function Page() {
       } else if (origin?.pointerId === event.pointerId && Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 10) {
         if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current);
         longPressTimer.current = null;
-        pressOrigin.current = null;
+        const lastPoint = pressLastPoint.current;
+        if (lastPoint?.pointerId === event.pointerId) event.currentTarget.scrollTop += lastPoint.y - event.clientY;
+        pressLastPoint.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
+        suppressTileClick.current = true;
         return;
       }
     }
@@ -549,6 +558,7 @@ export default function Page() {
     if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current);
     longPressTimer.current = null;
     pressOrigin.current = null;
+    pressLastPoint.current = null;
     const draggedId = draggedPostIdRef.current;
     if (!draggedId) {
       const selectedId = longPressPostIdRef.current;
@@ -579,6 +589,7 @@ export default function Page() {
     if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current);
     longPressTimer.current = null;
     pressOrigin.current = null;
+    pressLastPoint.current = null;
     draggedPostIdRef.current = null;
     dragOverPostIdRef.current = null;
     longPressPostIdRef.current = null;
@@ -664,7 +675,7 @@ export default function Page() {
 
   return <>
     <main className="preview-page">
-    <header className="profile-bar"><label className="profile-add-button" aria-label="다음 사진 추가">＋<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={choosePhotos} /></label><div className="profile-identity"><button className="profile-username" type="button" aria-label="아이디 수정" onClick={editProfileIdentity}>{username || "mygrid"}</button></div><label className="profile-migration-button" aria-label="인스타 프로필 캡처로 피드 채우기"><GridMark uniform /><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label></header>
+    <header className="profile-bar"><label className="profile-add-button" aria-label="다음 사진 추가">＋<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={choosePhotos} /></label><div className="profile-identity"><button className="profile-username" type="button" aria-label="아이디 수정" onClick={editProfileIdentity}>{username || "mygrid"}</button></div><label className="profile-migration-button" aria-label="인스타 프로필 캡처로 피드 채우기"><CaptureIcon /><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label></header>
     <section className="profile-scroll" onPointerMove={moveTile} onPointerUp={finishTilePress} onPointerCancel={cancelTilePress} onPaste={pasteGridScreenshot}>
       <div className="profile-summary"><div className="avatar" /><div className="stat"><b>{allPosts.length}</b><small>게시물</small></div><div className="stat"><b>—</b><small>팔로워</small></div><div className="stat"><b>—</b><small>팔로잉</small></div></div>
       <h2 className="profile-name">{username || "mygrid"}</h2>
