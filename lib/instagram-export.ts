@@ -144,6 +144,13 @@ export async function readDraftPhotos(): Promise<ImportedMedia[]> {
   }));
 }
 
+export async function readDraftPhoto(id: string): Promise<string | null> {
+  const db = await openDatabase();
+  const post = await request<StoredMedia & { key: string } | undefined>(db.transaction("media").objectStore("media").get(`draft:${id}`));
+  db.close();
+  return post?.blob ? URL.createObjectURL(post.blob) : null;
+}
+
 export async function deleteDraftPhoto(id: string) {
   const db = await openDatabase();
   await new Promise<void>((resolve, reject) => {
