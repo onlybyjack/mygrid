@@ -52,8 +52,7 @@ button { cursor:pointer; }
 .guide-finger { position:absolute; left:50%; bottom:24px; width:36px; height:36px; display:grid; place-items:center; border:2px solid #fff; border-radius:50%; color:#fff; background:var(--ink); font-size:19px; box-shadow:0 5px 12px #17171755; transform:translateX(-50%); animation:guide-tap 2.4s ease-in-out infinite; }
 .guide-finger::before { content:"↗"; }
 .onboarding-upload { position:relative; min-height:70px; display:flex; align-items:center; gap:12px; padding:11px 14px; border:1px solid #c8c8c5; border-radius:17px; background:#f1f1ee; cursor:pointer; }
-.onboarding-upload > .grid-mark { width:27px; height:27px; flex:none; gap:2px; }
-.onboarding-upload > .grid-mark i { background:var(--ink); }
+.onboarding-upload > .capture-icon { width:27px; height:27px; flex:none; color:var(--ink); }
 .onboarding-upload > span { min-width:0; display:grid; gap:3px; }
 .onboarding-upload b { font-size:13px; }
 .onboarding-upload small { color:var(--muted); font-size:10px; }
@@ -170,8 +169,8 @@ h1 span { white-space:nowrap; }
 .profile-bar { height:52px; flex:none; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:0 16px; border-bottom:1px solid var(--line); }
 .profile-add-button { width:32px; height:32px; display:grid; place-items:center; justify-self:start; color:var(--ink); font-size:31px; font-weight:300; line-height:1; cursor:pointer; }
 .profile-add-button input { display:none; }
-.profile-migration-button { width:32px; height:32px; display:grid; place-items:center; justify-self:end; color:var(--muted); cursor:pointer; }
-.capture-icon { width:23px; height:23px; fill:none; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.7; }
+.profile-migration-button { width:32px; height:32px; display:grid; place-items:center; justify-self:end; color:var(--ink); cursor:pointer; }
+.capture-icon { width:32px; height:32px; fill:none; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.7; }
 .profile-migration-button input { display:none; }
 .profile-identity { display:flex; align-items:baseline; justify-self:center; gap:7px; }
 .profile-username { min-height:32px; padding:0; border:0; color:var(--ink); background:transparent; font:inherit; }
@@ -234,8 +233,7 @@ h1 span { white-space:nowrap; }
 .empty p { margin:0; color:var(--muted); font-size:12px; }
 .empty-migration-upload { position:relative; width:min(100%, 420px); min-height:70px; display:flex; align-items:center; gap:12px; margin-top:14px; padding:11px 14px; border:1px solid #c8c8c5; border-radius:17px; background:#f1f1ee; cursor:pointer; }
 .empty-migration-mark { width:30px; height:30px; display:grid; place-items:center; flex:none; }
-.empty-migration-mark .grid-mark { width:27px; height:27px; gap:2px; }
-.empty-migration-mark .grid-mark i { background:var(--ink); }
+.empty-migration-mark .capture-icon { width:27px; height:27px; color:var(--ink); }
 .empty-migration-copy { min-width:0; display:grid; gap:3px; text-align:left; }
 .empty-migration-copy b { font-size:13px; }
 .empty-migration-copy small { color:var(--muted); font-size:10px; }
