@@ -198,7 +198,7 @@ h1 span { white-space:nowrap; }
 .tile-selector.is-selected { background:var(--ink); transform:scale(1.05); }
 .tile-selector i { width:8px; height:5px; border-bottom:2px solid #fff; border-left:2px solid #fff; opacity:0; transform:rotate(-45deg) translate(1px, -1px); }
 .tile-selector.is-selected i { opacity:1; }
-.selection-delete { position:fixed; z-index:15; left:50%; bottom:max(20px, calc(env(safe-area-inset-bottom) + 20px)); width:52px; height:52px; display:grid; place-items:center; padding:0; border:0; color:var(--ink); background:transparent; transform:translateX(-50%); }
+.selection-delete { position:fixed; z-index:15; left:50%; bottom:max(20px, calc(env(safe-area-inset-bottom) + 20px)); width:52px; height:52px; display:grid; place-items:center; padding:0; border:1px solid #ffffff; border-radius:50%; color:var(--ink); background:#fffffff2; box-shadow:0 4px 18px #1717173d, 0 0 0 5px #ffffff66; transform:translateX(-50%); }
 .selection-delete:active { transform:translateX(-50%) translateY(1px); }
 .tile:focus-visible { outline:3px solid var(--accent); outline-offset:-3px; }
 .tile img { width:100%; height:100%; display:block; object-fit:cover; }
