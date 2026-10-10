@@ -193,6 +193,7 @@ export default function Page() {
   const [editorImageSize, setEditorImageSize] = useState<{ width: number; height: number } | null>(null);
   const [editorPreviewUrl, setEditorPreviewUrl] = useState("");
   const [editorFromOnboarding, setEditorFromOnboarding] = useState(false);
+  const [editingIdentity, setEditingIdentity] = useState(false);
   const editedFilesRef = useRef<File[]>([]);
   const editorPointers = useRef(new Map<number, { x: number; y: number }>());
   const editorGesture = useRef<{ startX: number; startY: number; baseX: number; baseY: number; distance: number; zoom: number } | null>(null);
@@ -437,12 +438,20 @@ export default function Page() {
   }
 
   function continueToScreenshot() {
-    setHomeStep(2);
     setMessage("");
+    if (editingIdentity) {
+      setEditingIdentity(false);
+      setPreview(true);
+      return;
+    }
+    setHomeStep(2);
   }
 
   function editProfileIdentity() {
     setSelectedPost(null);
+    setSelectedPostIds(new Set());
+    setEditingIdentity(true);
+    setHomeStep(1);
     setPreview(false);
     setMessage("");
   }

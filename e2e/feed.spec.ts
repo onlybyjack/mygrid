@@ -43,6 +43,17 @@ test.describe("onboarding", () => {
     await page.reload();
     await expect(page.getByText("피드가 기다리고 있어요")).toBeVisible();
   });
+
+  test("editing the ID from the feed opens the ID step and returns to the same feed", async ({ page }) => {
+    await openEmptyFeed(page);
+    await addPhotos(page, [RED]);
+    await page.getByRole("button", { name: "아이디 수정" }).click();
+    await expect(page.locator("#onboarding-username")).toBeVisible();
+    await page.locator("#onboarding-username").fill("renamed");
+    await page.getByRole("button", { name: "다음" }).click();
+    await expect(page.getByRole("button", { name: "아이디 수정" })).toHaveText("renamed");
+    await expectAllTilesLoaded(page, 1);
+  });
 });
 
 test.describe("photo editor", () => {
