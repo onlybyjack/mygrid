@@ -156,6 +156,23 @@ test.describe("viewer", () => {
 });
 
 test.describe("selection and reorder", () => {
+  test("long-press selects, tap toggles more, and deleting selected photos persists", async ({ page }) => {
+    await openEmptyFeed(page);
+    await addPhotos(page, [RED, GREEN, BLUE]);
+    await expectStoredDrafts(page, 3);
+    await longPress(page, 0);
+    await page.mouse.up();
+    await expect(tiles(page).nth(0)).toHaveAttribute("aria-pressed", "true");
+    await tiles(page).nth(1).click();
+    await expect(tiles(page).nth(1)).toHaveAttribute("aria-pressed", "true");
+    page.once("dialog", (dialog) => void dialog.accept());
+    await page.getByRole("button", { name: "선택한 게시물 삭제" }).click();
+    await expectAllTilesLoaded(page, 1);
+    await expectStoredDrafts(page, 1);
+    await page.reload();
+    await expectAllTilesLoaded(page, 1);
+  });
+
   test("long-press and drag reorders photos and the order survives a restart", async ({ page }) => {
     await openEmptyFeed(page);
     await addPhotos(page, [RED, GREEN, BLUE]);

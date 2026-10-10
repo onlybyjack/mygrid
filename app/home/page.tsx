@@ -625,7 +625,9 @@ export default function Page() {
       longPressMoved.current = false;
       setLongPressPostId(null);
       draggedTile.current = null;
-      window.setTimeout(() => { suppressTileClick.current = false; }, 250);
+      // The browser fires one click right after the long-press ends. If it
+      // never arrives, stop ignoring taps soon after.
+      if (suppressTileClick.current) window.setTimeout(() => { suppressTileClick.current = false; }, 250);
       return;
     }
     const target = dragOverPostIdRef.current || document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-post-id]")?.dataset.postId;
@@ -659,7 +661,6 @@ export default function Page() {
   }
 
   function openPost(post: Post) {
-    if (suppressTileClick.current) return;
     setSelectedPost(post);
   }
 
@@ -686,8 +687,11 @@ export default function Page() {
     });
   }
 
-  function handleTileClick(event: React.MouseEvent<HTMLButtonElement>, post: Post) {
-    if (suppressTileClick.current) return;
+  function handleTileClick(post: Post) {
+    if (suppressTileClick.current) {
+      suppressTileClick.current = false;
+      return;
+    }
     if (selectedPostIds.size > 0) {
       toggleSelectedPost(post.id);
       return;
@@ -747,7 +751,7 @@ export default function Page() {
       <div className="profile-summary"><div className="avatar" /><div className="stat"><b>{allPosts.length}</b><small>게시물</small></div><div className="stat"><b>—</b><small>팔로워</small></div><div className="stat"><b>—</b><small>팔로잉</small></div></div>
       <h2 className="profile-name">{username || "mygrid"}</h2>
       <div className="profile-tabs"><div className="profile-tab selected"><GridMark uniform /></div></div>
-      {allPosts.length ? <div className="grid">{Array.from({ length: Math.ceil(allPosts.length / 3) }, (_, row) => <div className="grid-row" key={row}>{[0, 1, 2].map((column) => { const post = allPosts[row * 3 + column]; if (!post) return <div className="tile placeholder" key={`empty-${row}-${column}`} />; const selected = selectedPostIds.has(post.id); const selectionMode = selectedPostIds.size > 0 || longPressPostId !== null; return <button className={`tile${draggedPostId === post.id ? " is-dragging" : ""}${dragOverPostId === post.id ? " drop-target" : ""}`} type="button" key={post.id} data-post-id={post.id} onPointerDown={(event) => startTilePress(event, post.id)} onContextMenu={(event) => event.preventDefault()} onDragStart={(event) => event.preventDefault()} onSelect={(event) => event.preventDefault()} onClick={(event) => handleTileClick(event, post)} aria-pressed={selected} aria-label={selectionMode ? "게시물 선택" : "길게 눌러 게시물 이동"}><img src={mediaUrl(post.image)} alt="게시물" onLoad={() => imageRecoveries.current.delete(post.id)} onError={() => recoverPostImage(post.id, post.image)} /><span className={`tile-selector${selectionMode ? " is-visible" : ""}${selected ? " is-selected" : ""}`} aria-hidden="true"><i /></span></button>; })}</div>)}</div> : <div className="empty"><b>피드가 기다리고 있어요</b><p>사진을 추가해 나만의 그리드를 만들어 보세요.</p><label className="empty-migration-upload" aria-label="인스타 프로필 캡처로 기존 피드 채우기"><span className="empty-migration-mark"><CaptureIcon /></span><span className="empty-migration-copy"><b>인스타 프로필 캡처</b><small>기존 피드를 자동으로 채워드려요.</small></span><strong>↑</strong><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label></div>}
+      {allPosts.length ? <div className="grid">{Array.from({ length: Math.ceil(allPosts.length / 3) }, (_, row) => <div className="grid-row" key={row}>{[0, 1, 2].map((column) => { const post = allPosts[row * 3 + column]; if (!post) return <div className="tile placeholder" key={`empty-${row}-${column}`} />; const selected = selectedPostIds.has(post.id); const selectionMode = selectedPostIds.size > 0 || longPressPostId !== null; return <button className={`tile${draggedPostId === post.id ? " is-dragging" : ""}${dragOverPostId === post.id ? " drop-target" : ""}`} type="button" key={post.id} data-post-id={post.id} onPointerDown={(event) => startTilePress(event, post.id)} onContextMenu={(event) => event.preventDefault()} onDragStart={(event) => event.preventDefault()} onSelect={(event) => event.preventDefault()} onClick={() => handleTileClick(post)} aria-pressed={selected} aria-label={selectionMode ? "게시물 선택" : "길게 눌러 게시물 이동"}><img src={mediaUrl(post.image)} alt="게시물" onLoad={() => imageRecoveries.current.delete(post.id)} onError={() => recoverPostImage(post.id, post.image)} /><span className={`tile-selector${selectionMode ? " is-visible" : ""}${selected ? " is-selected" : ""}`} aria-hidden="true"><i /></span></button>; })}</div>)}</div> : <div className="empty"><b>피드가 기다리고 있어요</b><p>사진을 추가해 나만의 그리드를 만들어 보세요.</p><label className="empty-migration-upload" aria-label="인스타 프로필 캡처로 기존 피드 채우기"><span className="empty-migration-mark"><CaptureIcon /></span><span className="empty-migration-copy"><b>인스타 프로필 캡처</b><small>기존 피드를 자동으로 채워드려요.</small></span><strong>↑</strong><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label></div>}
     </section>
     </main>
     {message && <div className="feed-message" role="alert" onClick={() => setMessage("")}>{message}</div>}
