@@ -228,6 +228,7 @@ h1 span { white-space:nowrap; }
 .crop-grid i:nth-child(3), .crop-grid i:nth-child(4) { right:0; left:0; height:1px; }
 .crop-grid i:nth-child(3) { top:33.333%; }
 .crop-grid i:nth-child(4) { top:66.666%; }
+.editor-confirm:disabled { opacity:.5; }
 .editor-confirm { align-self:flex-end; min-width:106px; margin:0 0 4px; padding:12px 18px; border:0; border-radius:28px; color:#fff; background:#4658ff; font-size:14px; font-weight:700; }
 .empty { min-height:350px; display:grid; place-content:center; justify-items:center; gap:8px; padding:24px; border:1px solid var(--line); margin:16px; }
 .empty p { margin:0; color:var(--muted); font-size:12px; }

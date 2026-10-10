@@ -57,6 +57,15 @@ test.describe("onboarding", () => {
 });
 
 test.describe("photo editor", () => {
+  test("tapping the confirm button twice quickly adds the photo only once", async ({ page }) => {
+    await openEmptyFeed(page);
+    await page.getByLabel("다음 사진 추가").setInputFiles([RED]);
+    await page.locator(".editor-confirm").dblclick();
+    await expect(page.getByRole("dialog", { name: "사진 편집" })).toBeHidden();
+    await expectStoredDrafts(page, 1);
+    await expect(tiles(page)).toHaveCount(1);
+  });
+
   test("new photos appear first, in the order they were picked", async ({ page }) => {
     await openEmptyFeed(page);
     await addPhotos(page, [RED]);

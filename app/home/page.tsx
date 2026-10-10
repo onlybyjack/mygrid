@@ -194,7 +194,9 @@ export default function Page() {
   const [editorPreviewUrl, setEditorPreviewUrl] = useState("");
   const [editorFromOnboarding, setEditorFromOnboarding] = useState(false);
   const [editingIdentity, setEditingIdentity] = useState(false);
+  const [editorBusy, setEditorBusy] = useState(false);
   const editedFilesRef = useRef<File[]>([]);
+  const editorBusyRef = useRef(false);
   const editorPointers = useRef(new Map<number, { x: number; y: number }>());
   const editorGesture = useRef<{ startX: number; startY: number; baseX: number; baseY: number; distance: number; zoom: number } | null>(null);
   const draftsRef = useRef<Post[]>([]);
@@ -321,7 +323,18 @@ export default function Page() {
 
   async function confirmCrop() {
     const file = editorFiles[editorIndex];
-    if (!file) return;
+    if (!file || editorBusyRef.current) return;
+    editorBusyRef.current = true;
+    setEditorBusy(true);
+    try {
+      await finishCrop(file);
+    } finally {
+      editorBusyRef.current = false;
+      setEditorBusy(false);
+    }
+  }
+
+  async function finishCrop(file: File) {
     setMessage("사진을 준비하고 있어요.");
     const cropped = await cropPhoto(file);
     editedFilesRef.current.push(cropped);
@@ -726,6 +739,6 @@ export default function Page() {
         <button className="viewer-delete" type="button" onClick={() => removePost(viewerPost.id)} aria-label="게시물 삭제" title="게시물 삭제"><TrashIcon /></button>
       </div>
     </div>}
-    {editorFiles.length > 0 && editorPreviewUrl && <div className="photo-editor" role="dialog" aria-modal="true" aria-label="사진 편집"><div className="editor-panel"><div className="editor-heading"><button className="editor-close" type="button" aria-label="편집 취소" onClick={() => { setEditorFiles([]); setMessage(""); if (editorFromOnboarding) { setPreview(false); setHomeStep(2); } }}>×</button><span>{editorIndex + 1} / {editorFiles.length}</span></div><div className="crop-stage crop-portrait" onPointerDown={editorPointerDown} onPointerMove={editorPointerMove} onPointerUp={editorPointerUp} onPointerCancel={editorPointerUp} onWheel={editorWheel}><img src={editorPreviewUrl} alt="편집할 사진" onLoad={(event) => setEditorImageSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })} style={{ objectFit: editorImageSize && editorImageSize.width <= editorImageSize.height ? "cover" : "contain", transform: `translate(${editorOffsetX * 100}%, ${editorOffsetY * 100}%) scale(${editorZoom})` }} /><div className="crop-grid" aria-hidden="true"><i /><i /><i /><i /></div></div><button className="editor-confirm" type="button" onClick={() => void confirmCrop()}>{editorIndex + 1 < editorFiles.length ? "다음 →" : "→"}</button></div></div>}
+    {editorFiles.length > 0 && editorPreviewUrl && <div className="photo-editor" role="dialog" aria-modal="true" aria-label="사진 편집"><div className="editor-panel"><div className="editor-heading"><button className="editor-close" type="button" aria-label="편집 취소" onClick={() => { setEditorFiles([]); setMessage(""); if (editorFromOnboarding) { setPreview(false); setHomeStep(2); } }}>×</button><span>{editorIndex + 1} / {editorFiles.length}</span></div><div className="crop-stage crop-portrait" onPointerDown={editorPointerDown} onPointerMove={editorPointerMove} onPointerUp={editorPointerUp} onPointerCancel={editorPointerUp} onWheel={editorWheel}><img src={editorPreviewUrl} alt="편집할 사진" onLoad={(event) => setEditorImageSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })} style={{ objectFit: editorImageSize && editorImageSize.width <= editorImageSize.height ? "cover" : "contain", transform: `translate(${editorOffsetX * 100}%, ${editorOffsetY * 100}%) scale(${editorZoom})` }} /><div className="crop-grid" aria-hidden="true"><i /><i /><i /><i /></div></div><button className="editor-confirm" type="button" disabled={editorBusy} onClick={() => void confirmCrop()}>{editorIndex + 1 < editorFiles.length ? "다음 →" : "→"}</button></div></div>}
   </>;
 }
