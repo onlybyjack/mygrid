@@ -16,7 +16,7 @@ Instagram 피드를 미리 배치해 보는 모바일 웹앱(PWA). 사진을 올
 | 단위 테스트 (Vitest + fake-indexeddb) | `npm test` |
 | E2E 테스트 (Playwright, iPhone WebKit + Android Chromium) | `npm run test:e2e` |
 
-E2E는 포트 3100에서 `next dev`를 자동으로 띄운다(이미 떠 있으면 재사용). 브라우저가 없으면 `npx playwright install webkit chromium`.
+E2E는 포트 3100에서 `next dev`를 자동으로 띄운다(이미 떠 있으면 재사용). 같은 폴더에서 `npm run dev`가 이미 돌고 있으면 두 번째 서버가 뜨지 못하니 `E2E_PORT=3000 npm run test:e2e`로 그 서버를 쓴다. 브라우저가 없으면 `npx playwright install webkit chromium`.
 
 ## 구조
 
@@ -52,7 +52,8 @@ E2E는 포트 3100에서 `next dev`를 자동으로 띄운다(이미 떠 있으�
 - 사진 추가/삭제/정렬은 **바뀐 레코드만** 쓴다. 전체를 지우고 다시 쓰지 않는다. 순서는 `profiles` 스토어의 `draft-order`에 id 배열로 따로 저장한다.
 - 화면의 이미지는 메모리의 Blob으로 만든 `blob:` URL을 쓰고, 원본 Blob을 `Post.blob`에 들고 있는다. iOS가 백그라운드에서 `blob:` URL을 무효화해도 `onError`에서 새 URL로 복구한다.
 - 저장 쓰기는 `persist()` 큐로 직렬화한다(정렬이 추가보다 먼저 저장되는 일 방지).
-- `viewportFit: "cover"`이므로 화면 상단/하단에 붙는 요소는 `env(safe-area-inset-top/bottom)` 여백을 넣는다. 빠지면 상태바 아래로 들어가 흐릿하게(블러) 보인다.
+- `viewportFit: "cover"`이므로 화면 상단/하단에 붙는 요소는 `env(safe-area-inset-top/bottom)` 여백을 넣는다.
+- iOS 26+ 홈 화면 앱은 상태바 설정과 상관없이 화면 위쪽 약 40pt를 시스템이 블러 처리한다. **화면 맨 위에 배경색 있는 `position: fixed` 요소(높이 6px↑, 너비 80%↑, 위에서 4px 이내)가 있을 때만** 블러가 빠진다. `sticky`로는 안 된다. 그래서 피드 헤더(`.profile-bar`)는 fixed이고, 헤더 없는 화면은 `layout.tsx`의 `.status-bar-backdrop`이 받친다. 헤더를 바꾸면 `e2e/feed.spec.ts`의 layout 테스트가 이 조건을 지킨다.
 - 비동기 확정 버튼(편집기 확인 등)은 처리 중 잠가서 연타로 중복 추가되지 않게 한다.
 - 온보딩 완료 여부는 localStorage `mygrid:identity`의 `onboarded`로 판단한다. 아이디가 비어 있어도 피드를 복원해야 한다.
 

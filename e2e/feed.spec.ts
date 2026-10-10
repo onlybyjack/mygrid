@@ -199,3 +199,30 @@ test.describe("selection and reorder", () => {
     expect(await tileColors(page)).toEqual(["green", "blue", "red"]);
   });
 });
+
+test.describe("layout", () => {
+  // iOS 26+ home-screen apps blur the top of the page unless a fixed box with
+  // a background sits at the top edge (>= 6px tall, >= 80% wide, within 4px).
+  test("the feed header is a fixed, opaque bar across the top edge", async ({ page }) => {
+    await openEmptyFeed(page);
+    const header = page.locator(".profile-bar");
+    const style = await header.evaluate((element) => {
+      const computed = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return { position: computed.position, background: computed.backgroundColor, top: rect.top, height: rect.height, widthRatio: rect.width / window.innerWidth };
+    });
+    expect(style.position).toBe("fixed");
+    expect(style.top).toBeLessThanOrEqual(4);
+    expect(style.height).toBeGreaterThanOrEqual(6);
+    expect(style.widthRatio).toBeGreaterThanOrEqual(0.8);
+    expect(style.background).not.toBe("rgba(0, 0, 0, 0)");
+  });
+
+  test("the first row of photos is not hidden under the fixed header", async ({ page }) => {
+    await openEmptyFeed(page);
+    await addPhotos(page, [RED]);
+    const headerBottom = await page.locator(".profile-bar").evaluate((element) => element.getBoundingClientRect().bottom);
+    const summaryTop = await page.locator(".profile-summary").evaluate((element) => element.getBoundingClientRect().top);
+    expect(summaryTop).toBeGreaterThanOrEqual(headerBottom);
+  });
+});

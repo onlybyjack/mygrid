@@ -7,6 +7,7 @@ body { min-height:100dvh; color:var(--ink); font-family:Inter,'Noto Sans KR',san
 button, input { font:inherit; }
 button { cursor:pointer; }
 .connect-page, .preview-page { width:100%; max-width:620px; min-height:100svh; min-height:100dvh; margin:0 auto; background:var(--paper); }
+.status-bar-backdrop { position:fixed; z-index:5; top:0; right:0; left:0; height:env(safe-area-inset-top); background:var(--paper); pointer-events:none; }
 .splash-page { width:100%; min-height:100svh; min-height:100dvh; display:grid; place-content:center; justify-items:center; gap:12px; color:var(--ink); background:var(--accent); }
 .splash-logo { width:64px; height:64px; display:grid; place-items:center; border-radius:50%; color:var(--accent); background:var(--ink); font-size:28px; font-weight:800; animation:splash-pop .7s ease both; }
 .splash-logo .grid-mark { width:36px; height:36px; gap:3px; }
@@ -165,8 +166,9 @@ h1 span { white-space:nowrap; }
 .help-shot strong { font-size:10px; line-height:1.25; }
 .help-shot em { color:var(--muted); font-size:9px; font-style:normal; line-height:1.25; }
 .help-step > b { display:block; margin-top:7px; font-size:10px; line-height:1.35; }
-.preview-page { display:flex; flex-direction:column; height:100dvh; min-height:100svh; overflow:hidden; }
-.profile-bar { position:sticky; top:0; z-index:10; height:calc(52px + env(safe-area-inset-top)); flex:none; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:env(safe-area-inset-top) 16px 0; border-bottom:1px solid var(--line); background:var(--paper); }
+.preview-page { display:flex; flex-direction:column; height:100dvh; min-height:100svh; overflow:hidden; padding-top:calc(52px + env(safe-area-inset-top)); }
+/* iOS 26+ home-screen apps blur the top of the page; WebKit skips the blur only under a fixed box with a background at the top edge. */
+.profile-bar { position:fixed; z-index:10; top:0; right:0; left:0; width:100%; max-width:620px; margin:0 auto; height:calc(52px + env(safe-area-inset-top)); flex:none; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:env(safe-area-inset-top) 16px 0; border-bottom:1px solid var(--line); background:var(--paper); }
 .profile-add-button { width:32px; height:32px; display:grid; place-items:center; justify-self:start; color:var(--ink); font-size:31px; font-weight:300; line-height:1; cursor:pointer; }
 .profile-add-button input { display:none; }
 .profile-migration-button { width:32px; height:32px; display:grid; place-items:center; justify-self:end; color:var(--ink); cursor:pointer; }

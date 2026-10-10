@@ -17,5 +17,5 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="ko"><body>{children}</body></html>;
+  return <html lang="ko"><body><div className="status-bar-backdrop" aria-hidden="true" />{children}</body></html>;
 }
