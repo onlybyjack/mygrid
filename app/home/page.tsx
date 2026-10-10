@@ -6,6 +6,7 @@ import GridMark from "../components/grid-mark";
 
 type Post = { id: string; image: string; blob: Blob };
 const MAX_IMAGE_RECOVERIES = 3;
+const UNREADABLE_PHOTO_MESSAGE = "읽을 수 없는 사진은 건너뛰었어요.";
 const IDENTITY_KEY = "mygrid:identity";
 const CROP_WIDTH = 1200;
 const CROP_HEIGHT = 1600;
@@ -257,6 +258,12 @@ export default function Page() {
     };
   }, [selectedPost]);
 
+  useEffect(() => {
+    if (!preview || !message) return;
+    const timer = window.setTimeout(() => setMessage(""), 4000);
+    return () => window.clearTimeout(timer);
+  }, [preview, message]);
+
   const allPosts = drafts;
   const viewerPost = selectedPost ? drafts.find((post) => post.id === selectedPost.id) ?? null : null;
   draftsRef.current = drafts;
@@ -278,6 +285,7 @@ export default function Page() {
 
   function openPhotoEditor(files: File[], fromOnboarding = false) {
     editedFilesRef.current = [];
+    setMessage("");
     setEditorFromOnboarding(fromOnboarding);
     setPreview(true);
     setEditorFiles(files);
@@ -327,22 +335,33 @@ export default function Page() {
     editorBusyRef.current = true;
     setEditorBusy(true);
     try {
-      await finishCrop(file);
+      const cropped = await cropPhoto(file).catch(() => null);
+      if (cropped) editedFilesRef.current.push(cropped);
+      await advanceEditor(cropped ? "" : UNREADABLE_PHOTO_MESSAGE);
     } finally {
       editorBusyRef.current = false;
       setEditorBusy(false);
     }
   }
 
-  async function finishCrop(file: File) {
-    setMessage("사진을 준비하고 있어요.");
-    const cropped = await cropPhoto(file);
-    editedFilesRef.current.push(cropped);
+  function skipUnreadablePhoto() {
+    if (editorBusyRef.current) return;
+    void advanceEditor(UNREADABLE_PHOTO_MESSAGE);
+  }
+
+  async function advanceEditor(notice: string) {
     if (editorIndex + 1 < editorFiles.length) {
+      setMessage(notice);
       setEditorIndex((index) => index + 1);
       setEditorZoom(1);
       setEditorOffsetX(0);
       setEditorOffsetY(0);
+      setEditorImageSize(null);
+      return;
+    }
+    if (!editedFilesRef.current.length) {
+      setEditorFiles([]);
+      setMessage(notice);
       return;
     }
     const prepared = await Promise.all(editedFilesRef.current.map(preparePhoto));
@@ -351,7 +370,7 @@ export default function Page() {
     draftsRef.current = nextDrafts;
     setDrafts(nextDrafts);
     setEditorFiles([]);
-    setMessage("");
+    setMessage(notice);
     setPreview(true);
     saveIdentity({ onboarded: true });
     void persist(() => addDraftPhotos(added, postIds(nextDrafts))).catch(() => setMessage("사진을 저장하지 못했어요. 앱을 다시 열면 사라질 수 있어요."));
@@ -731,6 +750,7 @@ export default function Page() {
       {allPosts.length ? <div className="grid">{Array.from({ length: Math.ceil(allPosts.length / 3) }, (_, row) => <div className="grid-row" key={row}>{[0, 1, 2].map((column) => { const post = allPosts[row * 3 + column]; if (!post) return <div className="tile placeholder" key={`empty-${row}-${column}`} />; const selected = selectedPostIds.has(post.id); const selectionMode = selectedPostIds.size > 0 || longPressPostId !== null; return <button className={`tile${draggedPostId === post.id ? " is-dragging" : ""}${dragOverPostId === post.id ? " drop-target" : ""}`} type="button" key={post.id} data-post-id={post.id} onPointerDown={(event) => startTilePress(event, post.id)} onContextMenu={(event) => event.preventDefault()} onDragStart={(event) => event.preventDefault()} onSelect={(event) => event.preventDefault()} onClick={(event) => handleTileClick(event, post)} aria-pressed={selected} aria-label={selectionMode ? "게시물 선택" : "길게 눌러 게시물 이동"}><img src={mediaUrl(post.image)} alt="게시물" onLoad={() => imageRecoveries.current.delete(post.id)} onError={() => recoverPostImage(post.id, post.image)} /><span className={`tile-selector${selectionMode ? " is-visible" : ""}${selected ? " is-selected" : ""}`} aria-hidden="true"><i /></span></button>; })}</div>)}</div> : <div className="empty"><b>피드가 기다리고 있어요</b><p>사진을 추가해 나만의 그리드를 만들어 보세요.</p><label className="empty-migration-upload" aria-label="인스타 프로필 캡처로 기존 피드 채우기"><span className="empty-migration-mark"><CaptureIcon /></span><span className="empty-migration-copy"><b>인스타 프로필 캡처</b><small>기존 피드를 자동으로 채워드려요.</small></span><strong>↑</strong><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label></div>}
     </section>
     </main>
+    {message && <div className="feed-message" role="alert" onClick={() => setMessage("")}>{message}</div>}
     {selectedPostIds.size > 0 && <button className="selection-delete" type="button" onClick={removeSelectedPosts} aria-label="선택한 게시물 삭제" title="선택한 게시물 삭제"><TrashIcon /></button>}
     {viewerPost && <div className="image-viewer" role="dialog" aria-modal="true" aria-label="Instagram 게시물 보기" onClick={() => setSelectedPost(null)}>
       <div className="viewer-content" onClick={(event) => event.stopPropagation()}>
@@ -739,6 +759,6 @@ export default function Page() {
         <button className="viewer-delete" type="button" onClick={() => removePost(viewerPost.id)} aria-label="게시물 삭제" title="게시물 삭제"><TrashIcon /></button>
       </div>
     </div>}
-    {editorFiles.length > 0 && editorPreviewUrl && <div className="photo-editor" role="dialog" aria-modal="true" aria-label="사진 편집"><div className="editor-panel"><div className="editor-heading"><button className="editor-close" type="button" aria-label="편집 취소" onClick={() => { setEditorFiles([]); setMessage(""); if (editorFromOnboarding) { setPreview(false); setHomeStep(2); } }}>×</button><span>{editorIndex + 1} / {editorFiles.length}</span></div><div className="crop-stage crop-portrait" onPointerDown={editorPointerDown} onPointerMove={editorPointerMove} onPointerUp={editorPointerUp} onPointerCancel={editorPointerUp} onWheel={editorWheel}><img src={editorPreviewUrl} alt="편집할 사진" onLoad={(event) => setEditorImageSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })} style={{ objectFit: editorImageSize && editorImageSize.width <= editorImageSize.height ? "cover" : "contain", transform: `translate(${editorOffsetX * 100}%, ${editorOffsetY * 100}%) scale(${editorZoom})` }} /><div className="crop-grid" aria-hidden="true"><i /><i /><i /><i /></div></div><button className="editor-confirm" type="button" disabled={editorBusy} onClick={() => void confirmCrop()}>{editorIndex + 1 < editorFiles.length ? "다음 →" : "→"}</button></div></div>}
+    {editorFiles.length > 0 && editorPreviewUrl && <div className="photo-editor" role="dialog" aria-modal="true" aria-label="사진 편집"><div className="editor-panel"><div className="editor-heading"><button className="editor-close" type="button" aria-label="편집 취소" onClick={() => { setEditorFiles([]); setMessage(""); if (editorFromOnboarding) { setPreview(false); setHomeStep(2); } }}>×</button><span>{editorIndex + 1} / {editorFiles.length}</span></div><div className="crop-stage crop-portrait" onPointerDown={editorPointerDown} onPointerMove={editorPointerMove} onPointerUp={editorPointerUp} onPointerCancel={editorPointerUp} onWheel={editorWheel}><img src={editorPreviewUrl} alt="편집할 사진" onError={skipUnreadablePhoto} onLoad={(event) => setEditorImageSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })} style={{ objectFit: editorImageSize && editorImageSize.width <= editorImageSize.height ? "cover" : "contain", transform: `translate(${editorOffsetX * 100}%, ${editorOffsetY * 100}%) scale(${editorZoom})` }} /><div className="crop-grid" aria-hidden="true"><i /><i /><i /><i /></div></div><button className="editor-confirm" type="button" disabled={editorBusy || !editorImageSize} onClick={() => void confirmCrop()}>{editorIndex + 1 < editorFiles.length ? "다음 →" : "→"}</button></div></div>}
   </>;
 }

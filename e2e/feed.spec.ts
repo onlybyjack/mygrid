@@ -66,12 +66,33 @@ test.describe("photo editor", () => {
     await expect(tiles(page)).toHaveCount(1);
   });
 
+  test("an unreadable image shows an error instead of freezing the editor", async ({ page }) => {
+    await openEmptyFeed(page);
+    await page.getByLabel("다음 사진 추가").setInputFiles([{ name: "broken.png", mimeType: "image/png", buffer: Buffer.from("not an image") }]);
+    await expect(page.getByRole("alert").filter({ hasText: "읽을 수 없는 사진" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "사진 편집" })).toBeHidden();
+    await expect(tiles(page)).toHaveCount(0);
+  });
+
   test("new photos appear first, in the order they were picked", async ({ page }) => {
     await openEmptyFeed(page);
     await addPhotos(page, [RED]);
     await addPhotos(page, [GREEN, BLUE]);
     await expectAllTilesLoaded(page, 3);
     expect(await tileColors(page)).toEqual(["green", "blue", "red"]);
+  });
+
+  test("an unreadable photo among good ones is skipped and the rest are added", async ({ page }) => {
+    await openEmptyFeed(page);
+    await page.getByLabel("다음 사진 추가").setInputFiles([RED, { name: "broken.png", mimeType: "image/png", buffer: Buffer.from("not an image") }, BLUE]);
+    const editor = page.getByRole("dialog", { name: "사진 편집" });
+    await expect(editor.getByText("1 / 3")).toBeVisible();
+    await editor.locator(".editor-confirm").click();
+    await expect(editor.getByText("3 / 3")).toBeVisible();
+    await editor.locator(".editor-confirm").click();
+    await expect(editor).toBeHidden();
+    await expectAllTilesLoaded(page, 2);
+    expect(await tileColors(page)).toEqual(["red", "blue"]);
   });
 });
 
