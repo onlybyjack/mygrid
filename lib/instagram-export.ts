@@ -1,11 +1,10 @@
 import { strFromU8, unzipSync } from "fflate";
+import { openDatabase, request } from "./draft-store";
 
 export type ImportedMedia = { id: string; image: string; caption?: string; timestamp?: number };
 type StoredMedia = { id: string; blob: Blob; caption?: string; timestamp?: number; order?: number };
 
 type StoredProfile = { username: string; count: number; updatedAt: number };
-const DB_NAME = "mygrid-export";
-const DB_VERSION = 1;
 
 function isImagePath(value: string) {
   return /\.(jpe?g|png|webp|heic)$/i.test(value);
@@ -58,19 +57,6 @@ export async function parseInstagramExport(file: File): Promise<ImportedMedia[]>
   });
 }
 
-function request<T>(request: IDBRequest<T>) {
-  return new Promise<T>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
-}
-
-function openDatabase() {
-  return new Promise<IDBDatabase>((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onupgradeneeded = () => { request.result.createObjectStore("profiles"); request.result.createObjectStore("media", { keyPath: "key" }); };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
 export async function saveImportedProfile(username: string, posts: ImportedMedia[]) {
   const db = await openDatabase();
   const stored = await Promise.all(posts.map(async (post, order): Promise<StoredMedia> => ({ id: post.id, blob: await fetch(post.image).then((response) => response.blob()), caption: post.caption, timestamp: post.timestamp, order })));
@@ -91,73 +77,4 @@ export async function readImportedProfile(): Promise<{ username: string; posts: 
   const media = await request<Array<StoredMedia & { key: string }>>(db.transaction("media").objectStore("media").getAll());
   db.close();
   return { username: profile.username, posts: media.filter((post) => post.key.startsWith("active:")).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((post) => ({ id: post.id, image: URL.createObjectURL(post.blob), caption: post.caption, timestamp: post.timestamp })) };
-}
-
-export async function saveDraftPhotos(posts: ImportedMedia[]) {
-  const db = await openDatabase();
-  const mediaStore = db.transaction("media").objectStore("media");
-  const current = await request<Array<StoredMedia & { key: string }>>(mediaStore.getAll());
-  const stored = await Promise.all(posts.map(async (post, order): Promise<StoredMedia> => ({
-    id: post.id,
-    blob: await fetch(post.image).then((response) => response.blob()),
-    caption: post.caption,
-    timestamp: post.timestamp,
-    order,
-  })));
-  await new Promise<void>((resolve, reject) => {
-    const transaction = db.transaction("media", "readwrite");
-    const store = transaction.objectStore("media");
-    current.filter((post) => post.key.startsWith("draft:")).forEach((post) => store.delete(post.key));
-    stored.forEach((post) => store.put({ ...post, key: `draft:${post.id}` }));
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = () => reject(transaction.error);
-  });
-  db.close();
-}
-
-export async function saveDraftOrder(posts: Pick<ImportedMedia, "id">[]) {
-  const db = await openDatabase();
-  const current = await request<Array<StoredMedia & { key: string }>>(db.transaction("media").objectStore("media").getAll());
-  const orderByKey = new Map(posts.map((post, order) => [`draft:${post.id}`, order]));
-  await new Promise<void>((resolve, reject) => {
-    const transaction = db.transaction("media", "readwrite");
-    const store = transaction.objectStore("media");
-    current.forEach((post) => {
-      const order = orderByKey.get(post.key);
-      if (order !== undefined) store.put({ ...post, order });
-    });
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = () => reject(transaction.error);
-  });
-  db.close();
-}
-
-export async function readDraftPhotos(): Promise<ImportedMedia[]> {
-  const db = await openDatabase();
-  const media = await request<Array<StoredMedia & { key: string }>>(db.transaction("media").objectStore("media").getAll());
-  db.close();
-  return media.filter((post) => post.key.startsWith("draft:")).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((post) => ({
-    id: post.id,
-    image: URL.createObjectURL(post.blob),
-    caption: post.caption,
-    timestamp: post.timestamp,
-  }));
-}
-
-export async function readDraftPhoto(id: string): Promise<string | null> {
-  const db = await openDatabase();
-  const post = await request<StoredMedia & { key: string } | undefined>(db.transaction("media").objectStore("media").get(`draft:${id}`));
-  db.close();
-  return post?.blob ? URL.createObjectURL(post.blob) : null;
-}
-
-export async function deleteDraftPhoto(id: string) {
-  const db = await openDatabase();
-  await new Promise<void>((resolve, reject) => {
-    const transaction = db.transaction("media", "readwrite");
-    transaction.objectStore("media").delete(`draft:${id}`);
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = () => reject(transaction.error);
-  });
-  db.close();
 }

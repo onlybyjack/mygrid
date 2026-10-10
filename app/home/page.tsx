@@ -1,10 +1,10 @@
 "use client";
 
 import { ChangeEvent, ClipboardEvent, useEffect, useRef, useState } from "react";
-import { deleteDraftPhoto, readDraftPhoto, readDraftPhotos, saveDraftOrder, saveDraftPhotos } from "../../lib/instagram-export";
+import { addDraftPhotos, deleteDraftPhotos, readDraftPhotos, saveDraftOrder } from "../../lib/draft-store";
 import GridMark from "../components/grid-mark";
 
-type Post = { id: string; image: string; draft?: boolean };
+type Post = { id: string; image: string };
 const IDENTITY_KEY = "mygrid:identity";
 const CROP_WIDTH = 1200;
 const CROP_HEIGHT = 1600;
@@ -14,14 +14,17 @@ function mediaUrl(url: string) {
   return `/api/image?url=${encodeURIComponent(url)}`;
 }
 
-let draftSaveQueue = Promise.resolve();
+let draftSaveQueue: Promise<unknown> = Promise.resolve();
 
-function persistDrafts(posts: Post[]) {
-  draftSaveQueue = draftSaveQueue.then(() => saveDraftPhotos(posts)).catch(() => undefined);
+// Writes run one at a time so a reorder can't land before the add it follows.
+function persist(task: () => Promise<void>) {
+  const next = draftSaveQueue.then(task);
+  draftSaveQueue = next.catch(() => undefined);
+  return next;
 }
 
-function persistDraftOrder(posts: Post[]) {
-  draftSaveQueue = draftSaveQueue.then(() => saveDraftOrder(posts)).catch(() => undefined);
+function postIds(posts: Post[]) {
+  return posts.map((post) => post.id);
 }
 
 async function preparePhoto(file: File): Promise<File> {
@@ -203,7 +206,6 @@ export default function Page() {
   const draggedTile = useRef<HTMLButtonElement | null>(null);
   const tileAnimations = useRef(new Map<string, Animation>());
   const suppressTileClick = useRef(false);
-  const recoveringImages = useRef(new Set<string>());
 
   useEffect(() => {
     let mounted = true;
@@ -222,10 +224,9 @@ export default function Page() {
     }
     void readDraftPhotos().then((savedDrafts) => {
       if (!mounted) return;
-      const restored = savedDrafts.map((post) => ({ id: post.id, image: post.image, draft: true }));
-      setDrafts(restored);
-      if (restored.length) setPreview(true);
-    }).catch(() => undefined);
+      setDrafts(savedDrafts.map((post) => ({ id: post.id, image: URL.createObjectURL(post.blob) })));
+      if (savedDrafts.length) setPreview(true);
+    }).catch(() => setMessage("저장된 사진을 불러오지 못했어요."));
     return () => {
       mounted = false;
       window.clearTimeout(revealTimer);
@@ -328,13 +329,15 @@ export default function Page() {
       return;
     }
     const prepared = await Promise.all(editedFilesRef.current.map(preparePhoto));
-    const nextDrafts = [...prepared.map((photo, index) => ({ id: `draft-${Date.now()}-${index}-${globalThis.crypto.randomUUID()}`, image: URL.createObjectURL(photo), draft: true })), ...drafts];
+    const added = prepared.map((photo, index) => ({ id: `draft-${Date.now()}-${index}-${globalThis.crypto.randomUUID()}`, blob: photo }));
+    const nextDrafts = [...added.map((photo) => ({ id: photo.id, image: URL.createObjectURL(photo.blob) })), ...draftsRef.current];
+    draftsRef.current = nextDrafts;
     setDrafts(nextDrafts);
-    persistDrafts(nextDrafts);
     setEditorFiles([]);
     setMessage("");
     setPreview(true);
     saveIdentity({ onboarded: true });
+    void persist(() => addDraftPhotos(added, postIds(nextDrafts))).catch(() => setMessage("사진을 저장하지 못했어요. 앱을 다시 열면 사라질 수 있어요."));
   }
 
   function editorPanBounds(zoom = editorZoom) {
@@ -505,7 +508,7 @@ export default function Page() {
     next.splice(to, 0, moved);
     draftsRef.current = next;
     setDrafts(next);
-    persistDraftOrder(next);
+    void persist(() => saveDraftOrder(postIds(next))).catch(() => undefined);
     window.requestAnimationFrame(() => {
       next.forEach((post) => {
         if (post.id === postId) return;
@@ -621,25 +624,6 @@ export default function Page() {
     openPost(image?.currentSrc ? { ...post, image: image.currentSrc } : post);
   }
 
-  async function recoverPostImage(event: React.SyntheticEvent<HTMLImageElement>, post: Post) {
-    const image = event.currentTarget;
-    if (recoveringImages.current.has(post.id)) {
-      image.style.visibility = "hidden";
-      return;
-    }
-    recoveringImages.current.add(post.id);
-    const restored = await readDraftPhoto(post.id).catch(() => null);
-    if (restored) {
-      image.style.visibility = "visible";
-      image.src = restored;
-    } else if (post.image.startsWith("http")) {
-      image.style.visibility = "visible";
-      image.src = post.image;
-    } else {
-      image.style.visibility = "hidden";
-    }
-  }
-
   function toggleSelectedPost(postId: string) {
     setSelectedPostIds((current) => {
       const next = new Set(current);
@@ -660,21 +644,22 @@ export default function Page() {
 
   function removeSelectedPosts() {
     if (!selectedPostIds.size || !window.confirm(`${selectedPostIds.size}개의 게시물을 삭제할까요?`)) return;
-    const selectedIds = selectedPostIds;
-    const nextPosts = drafts.filter((post) => !selectedIds.has(post.id));
-    draftsRef.current = nextPosts;
-    setDrafts(nextPosts);
+    deletePosts(selectedPostIds);
     setSelectedPostIds(new Set());
-    void Promise.all([...selectedIds].filter((postId) => postId.startsWith("draft-")).map((postId) => deleteDraftPhoto(postId))).catch(() => undefined);
-    persistDrafts(nextPosts);
   }
 
   function removePost(postId: string) {
-    const nextPosts = drafts.filter((post) => post.id !== postId);
-    setDrafts(nextPosts);
-    if (postId.startsWith("draft-")) void deleteDraftPhoto(postId).catch(() => undefined);
+    deletePosts(new Set([postId]));
     setSelectedPost(null);
-    persistDrafts(nextPosts);
+  }
+
+  function deletePosts(ids: Set<string>) {
+    const removed = draftsRef.current.filter((post) => ids.has(post.id));
+    const nextPosts = draftsRef.current.filter((post) => !ids.has(post.id));
+    draftsRef.current = nextPosts;
+    setDrafts(nextPosts);
+    removed.forEach((post) => URL.revokeObjectURL(post.image));
+    void persist(() => deleteDraftPhotos([...ids], postIds(nextPosts))).catch(() => setMessage("삭제한 사진을 저장하지 못했어요."));
   }
 
 
@@ -709,14 +694,14 @@ export default function Page() {
       <div className="profile-summary"><div className="avatar" /><div className="stat"><b>{allPosts.length}</b><small>게시물</small></div><div className="stat"><b>—</b><small>팔로워</small></div><div className="stat"><b>—</b><small>팔로잉</small></div></div>
       <h2 className="profile-name">{username || "mygrid"}</h2>
       <div className="profile-tabs"><div className="profile-tab selected"><GridMark uniform /></div></div>
-      {allPosts.length ? <div className="grid">{Array.from({ length: Math.ceil(allPosts.length / 3) }, (_, row) => <div className="grid-row" key={row}>{[0, 1, 2].map((column) => { const post = allPosts[row * 3 + column]; if (!post) return <div className="tile placeholder" key={`empty-${row}-${column}`} />; const selected = selectedPostIds.has(post.id); const selectionMode = selectedPostIds.size > 0 || longPressPostId !== null; return <button className={`tile${draggedPostId === post.id ? " is-dragging" : ""}${dragOverPostId === post.id ? " drop-target" : ""}`} type="button" key={post.id} data-post-id={post.id} onPointerDown={(event) => startTilePress(event, post.id)} onContextMenu={(event) => event.preventDefault()} onDragStart={(event) => event.preventDefault()} onSelect={(event) => event.preventDefault()} onClick={(event) => handleTileClick(event, post)} aria-pressed={selected} aria-label={selectionMode ? "게시물 선택" : "길게 눌러 게시물 이동"}><img src={mediaUrl(post.image)} alt="게시물" onError={(event) => void recoverPostImage(event, post)} /><span className={`tile-selector${selectionMode ? " is-visible" : ""}${selected ? " is-selected" : ""}`} aria-hidden="true"><i /></span></button>; })}</div>)}</div> : <div className="empty"><b>피드가 기다리고 있어요</b><p>사진을 추가해 나만의 그리드를 만들어 보세요.</p><label className="empty-migration-upload" aria-label="인스타 프로필 캡처로 기존 피드 채우기"><span className="empty-migration-mark"><CaptureIcon /></span><span className="empty-migration-copy"><b>인스타 프로필 캡처</b><small>기존 피드를 자동으로 채워드려요.</small></span><strong>↑</strong><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label></div>}
+      {allPosts.length ? <div className="grid">{Array.from({ length: Math.ceil(allPosts.length / 3) }, (_, row) => <div className="grid-row" key={row}>{[0, 1, 2].map((column) => { const post = allPosts[row * 3 + column]; if (!post) return <div className="tile placeholder" key={`empty-${row}-${column}`} />; const selected = selectedPostIds.has(post.id); const selectionMode = selectedPostIds.size > 0 || longPressPostId !== null; return <button className={`tile${draggedPostId === post.id ? " is-dragging" : ""}${dragOverPostId === post.id ? " drop-target" : ""}`} type="button" key={post.id} data-post-id={post.id} onPointerDown={(event) => startTilePress(event, post.id)} onContextMenu={(event) => event.preventDefault()} onDragStart={(event) => event.preventDefault()} onSelect={(event) => event.preventDefault()} onClick={(event) => handleTileClick(event, post)} aria-pressed={selected} aria-label={selectionMode ? "게시물 선택" : "길게 눌러 게시물 이동"}><img src={mediaUrl(post.image)} alt="게시물" /><span className={`tile-selector${selectionMode ? " is-visible" : ""}${selected ? " is-selected" : ""}`} aria-hidden="true"><i /></span></button>; })}</div>)}</div> : <div className="empty"><b>피드가 기다리고 있어요</b><p>사진을 추가해 나만의 그리드를 만들어 보세요.</p><label className="empty-migration-upload" aria-label="인스타 프로필 캡처로 기존 피드 채우기"><span className="empty-migration-mark"><CaptureIcon /></span><span className="empty-migration-copy"><b>인스타 프로필 캡처</b><small>기존 피드를 자동으로 채워드려요.</small></span><strong>↑</strong><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label></div>}
     </section>
     </main>
     {selectedPostIds.size > 0 && <button className="selection-delete" type="button" onClick={removeSelectedPosts} aria-label="선택한 게시물 삭제" title="선택한 게시물 삭제"><TrashIcon /></button>}
     {selectedPost && <div className="image-viewer" role="dialog" aria-modal="true" aria-label="Instagram 게시물 보기" onClick={() => setSelectedPost(null)}>
       <div className="viewer-content" onClick={(event) => event.stopPropagation()}>
         <button className="viewer-close" type="button" onClick={() => setSelectedPost(null)} aria-label="닫기" title="닫기"><CloseIcon /></button>
-        <img className="viewer-image" src={mediaUrl(selectedPost.image)} alt="Instagram 게시물 크게 보기" onError={(event) => void recoverPostImage(event, selectedPost)} />
+        <img className="viewer-image" src={mediaUrl(selectedPost.image)} alt="Instagram 게시물 크게 보기" />
         <button className="viewer-delete" type="button" onClick={() => removePost(selectedPost.id)} aria-label="게시물 삭제" title="게시물 삭제"><TrashIcon /></button>
       </div>
     </div>}
