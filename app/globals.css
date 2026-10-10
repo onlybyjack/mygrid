@@ -166,7 +166,7 @@ h1 span { white-space:nowrap; }
 .help-shot em { color:var(--muted); font-size:9px; font-style:normal; line-height:1.25; }
 .help-step > b { display:block; margin-top:7px; font-size:10px; line-height:1.35; }
 .preview-page { display:flex; flex-direction:column; height:100dvh; min-height:100svh; overflow:hidden; }
-.profile-bar { height:calc(52px + env(safe-area-inset-top)); flex:none; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:env(safe-area-inset-top) 16px 0; border-bottom:1px solid var(--line); }
+.profile-bar { position:sticky; top:0; z-index:10; height:calc(52px + env(safe-area-inset-top)); flex:none; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:env(safe-area-inset-top) 16px 0; border-bottom:1px solid var(--line); background:var(--paper); }
 .profile-add-button { width:32px; height:32px; display:grid; place-items:center; justify-self:start; color:var(--ink); font-size:31px; font-weight:300; line-height:1; cursor:pointer; }
 .profile-add-button input { display:none; }
 .profile-migration-button { width:32px; height:32px; display:grid; place-items:center; justify-self:end; color:var(--ink); cursor:pointer; }
