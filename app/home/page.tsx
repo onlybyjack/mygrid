@@ -755,7 +755,7 @@ export default function Page() {
     </section>
     </main>
     {message && <div className="feed-message" role="alert" onClick={() => setMessage("")}>{message}</div>}
-    {selectedPostIds.size > 0 && <button className="selection-delete" type="button" onClick={removeSelectedPosts} aria-label="선택한 게시물 삭제" title="선택한 게시물 삭제"><TrashIcon /></button>}
+    {selectedPostIds.size > 0 && <div className="selection-actions"><button className="selection-cancel" type="button" onClick={() => setSelectedPostIds(new Set())} aria-label="선택 취소" title="선택 취소"><CloseIcon /></button><button className="selection-delete" type="button" onClick={removeSelectedPosts} aria-label="선택한 게시물 삭제" title="선택한 게시물 삭제"><TrashIcon /><b>{selectedPostIds.size}</b></button></div>}
     {viewerPost && <div className="image-viewer" role="dialog" aria-modal="true" aria-label="Instagram 게시물 보기" onClick={() => setSelectedPost(null)}>
       <div className="viewer-content" onClick={(event) => event.stopPropagation()}>
         <button className="viewer-close" type="button" onClick={() => setSelectedPost(null)} aria-label="닫기" title="닫기"><CloseIcon /></button>

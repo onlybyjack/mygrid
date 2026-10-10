@@ -173,6 +173,17 @@ test.describe("selection and reorder", () => {
     await expectAllTilesLoaded(page, 1);
   });
 
+  test("a selection can be cleared without deleting", async ({ page }) => {
+    await openEmptyFeed(page);
+    await addPhotos(page, [RED, GREEN]);
+    await longPress(page, 0);
+    await page.mouse.up();
+    await expect(page.getByRole("button", { name: "선택한 게시물 삭제" })).toBeVisible();
+    await page.getByRole("button", { name: "선택 취소" }).click();
+    await expect(page.getByRole("button", { name: "선택한 게시물 삭제" })).toBeHidden();
+    await expect(tiles(page)).toHaveCount(2);
+  });
+
   test("long-press and drag reorders photos and the order survives a restart", async ({ page }) => {
     await openEmptyFeed(page);
     await addPhotos(page, [RED, GREEN, BLUE]);
