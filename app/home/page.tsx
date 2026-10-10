@@ -4,7 +4,8 @@ import { ChangeEvent, ClipboardEvent, useEffect, useRef, useState } from "react"
 import { addDraftPhotos, deleteDraftPhotos, readDraftPhotos, saveDraftOrder } from "../../lib/draft-store";
 import GridMark from "../components/grid-mark";
 
-type Post = { id: string; image: string };
+type Post = { id: string; image: string; blob: Blob };
+const MAX_IMAGE_RECOVERIES = 3;
 const IDENTITY_KEY = "mygrid:identity";
 const CROP_WIDTH = 1200;
 const CROP_HEIGHT = 1600;
@@ -206,6 +207,7 @@ export default function Page() {
   const draggedTile = useRef<HTMLButtonElement | null>(null);
   const tileAnimations = useRef(new Map<string, Animation>());
   const suppressTileClick = useRef(false);
+  const imageRecoveries = useRef(new Map<string, number>());
 
   useEffect(() => {
     let mounted = true;
@@ -224,7 +226,7 @@ export default function Page() {
     }
     void readDraftPhotos().then((savedDrafts) => {
       if (!mounted) return;
-      setDrafts(savedDrafts.map((post) => ({ id: post.id, image: URL.createObjectURL(post.blob) })));
+      setDrafts(savedDrafts.map((post) => ({ id: post.id, image: URL.createObjectURL(post.blob), blob: post.blob })));
       if (savedDrafts.length) setPreview(true);
     }).catch(() => setMessage("저장된 사진을 불러오지 못했어요."));
     return () => {
@@ -253,6 +255,7 @@ export default function Page() {
   }, [selectedPost]);
 
   const allPosts = drafts;
+  const viewerPost = selectedPost ? drafts.find((post) => post.id === selectedPost.id) ?? null : null;
   draftsRef.current = drafts;
 
   function saveIdentity(identity: { username?: string; onboarded?: boolean }) {
@@ -330,7 +333,7 @@ export default function Page() {
     }
     const prepared = await Promise.all(editedFilesRef.current.map(preparePhoto));
     const added = prepared.map((photo, index) => ({ id: `draft-${Date.now()}-${index}-${globalThis.crypto.randomUUID()}`, blob: photo }));
-    const nextDrafts = [...added.map((photo) => ({ id: photo.id, image: URL.createObjectURL(photo.blob) })), ...draftsRef.current];
+    const nextDrafts = [...added.map((photo) => ({ id: photo.id, image: URL.createObjectURL(photo.blob), blob: photo.blob })), ...draftsRef.current];
     draftsRef.current = nextDrafts;
     setDrafts(nextDrafts);
     setEditorFiles([]);
@@ -619,9 +622,18 @@ export default function Page() {
     setSelectedPost(post);
   }
 
-  function openPostFromTile(event: React.MouseEvent<HTMLButtonElement>, post: Post) {
-    const image = event.currentTarget.querySelector("img");
-    openPost(image?.currentSrc ? { ...post, image: image.currentSrc } : post);
+  // iOS can drop blob: URLs while the app is in the background. The Blob
+  // itself is still in memory, so hand the image a fresh URL for it.
+  function recoverPostImage(postId: string, failedUrl: string) {
+    const post = draftsRef.current.find((item) => item.id === postId);
+    if (!post || post.image !== failedUrl) return;
+    const attempts = imageRecoveries.current.get(postId) ?? 0;
+    if (attempts >= MAX_IMAGE_RECOVERIES) return;
+    imageRecoveries.current.set(postId, attempts + 1);
+    const next = draftsRef.current.map((item) => item.id === postId ? { ...item, image: URL.createObjectURL(item.blob) } : item);
+    URL.revokeObjectURL(failedUrl);
+    draftsRef.current = next;
+    setDrafts(next);
   }
 
   function toggleSelectedPost(postId: string) {
@@ -639,7 +651,7 @@ export default function Page() {
       toggleSelectedPost(post.id);
       return;
     }
-    openPostFromTile(event, post);
+    openPost(post);
   }
 
   function removeSelectedPosts() {
@@ -694,15 +706,15 @@ export default function Page() {
       <div className="profile-summary"><div className="avatar" /><div className="stat"><b>{allPosts.length}</b><small>게시물</small></div><div className="stat"><b>—</b><small>팔로워</small></div><div className="stat"><b>—</b><small>팔로잉</small></div></div>
       <h2 className="profile-name">{username || "mygrid"}</h2>
       <div className="profile-tabs"><div className="profile-tab selected"><GridMark uniform /></div></div>
-      {allPosts.length ? <div className="grid">{Array.from({ length: Math.ceil(allPosts.length / 3) }, (_, row) => <div className="grid-row" key={row}>{[0, 1, 2].map((column) => { const post = allPosts[row * 3 + column]; if (!post) return <div className="tile placeholder" key={`empty-${row}-${column}`} />; const selected = selectedPostIds.has(post.id); const selectionMode = selectedPostIds.size > 0 || longPressPostId !== null; return <button className={`tile${draggedPostId === post.id ? " is-dragging" : ""}${dragOverPostId === post.id ? " drop-target" : ""}`} type="button" key={post.id} data-post-id={post.id} onPointerDown={(event) => startTilePress(event, post.id)} onContextMenu={(event) => event.preventDefault()} onDragStart={(event) => event.preventDefault()} onSelect={(event) => event.preventDefault()} onClick={(event) => handleTileClick(event, post)} aria-pressed={selected} aria-label={selectionMode ? "게시물 선택" : "길게 눌러 게시물 이동"}><img src={mediaUrl(post.image)} alt="게시물" /><span className={`tile-selector${selectionMode ? " is-visible" : ""}${selected ? " is-selected" : ""}`} aria-hidden="true"><i /></span></button>; })}</div>)}</div> : <div className="empty"><b>피드가 기다리고 있어요</b><p>사진을 추가해 나만의 그리드를 만들어 보세요.</p><label className="empty-migration-upload" aria-label="인스타 프로필 캡처로 기존 피드 채우기"><span className="empty-migration-mark"><CaptureIcon /></span><span className="empty-migration-copy"><b>인스타 프로필 캡처</b><small>기존 피드를 자동으로 채워드려요.</small></span><strong>↑</strong><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label></div>}
+      {allPosts.length ? <div className="grid">{Array.from({ length: Math.ceil(allPosts.length / 3) }, (_, row) => <div className="grid-row" key={row}>{[0, 1, 2].map((column) => { const post = allPosts[row * 3 + column]; if (!post) return <div className="tile placeholder" key={`empty-${row}-${column}`} />; const selected = selectedPostIds.has(post.id); const selectionMode = selectedPostIds.size > 0 || longPressPostId !== null; return <button className={`tile${draggedPostId === post.id ? " is-dragging" : ""}${dragOverPostId === post.id ? " drop-target" : ""}`} type="button" key={post.id} data-post-id={post.id} onPointerDown={(event) => startTilePress(event, post.id)} onContextMenu={(event) => event.preventDefault()} onDragStart={(event) => event.preventDefault()} onSelect={(event) => event.preventDefault()} onClick={(event) => handleTileClick(event, post)} aria-pressed={selected} aria-label={selectionMode ? "게시물 선택" : "길게 눌러 게시물 이동"}><img src={mediaUrl(post.image)} alt="게시물" onLoad={() => imageRecoveries.current.delete(post.id)} onError={() => recoverPostImage(post.id, post.image)} /><span className={`tile-selector${selectionMode ? " is-visible" : ""}${selected ? " is-selected" : ""}`} aria-hidden="true"><i /></span></button>; })}</div>)}</div> : <div className="empty"><b>피드가 기다리고 있어요</b><p>사진을 추가해 나만의 그리드를 만들어 보세요.</p><label className="empty-migration-upload" aria-label="인스타 프로필 캡처로 기존 피드 채우기"><span className="empty-migration-mark"><CaptureIcon /></span><span className="empty-migration-copy"><b>인스타 프로필 캡처</b><small>기존 피드를 자동으로 채워드려요.</small></span><strong>↑</strong><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseGridScreenshot} /></label></div>}
     </section>
     </main>
     {selectedPostIds.size > 0 && <button className="selection-delete" type="button" onClick={removeSelectedPosts} aria-label="선택한 게시물 삭제" title="선택한 게시물 삭제"><TrashIcon /></button>}
-    {selectedPost && <div className="image-viewer" role="dialog" aria-modal="true" aria-label="Instagram 게시물 보기" onClick={() => setSelectedPost(null)}>
+    {viewerPost && <div className="image-viewer" role="dialog" aria-modal="true" aria-label="Instagram 게시물 보기" onClick={() => setSelectedPost(null)}>
       <div className="viewer-content" onClick={(event) => event.stopPropagation()}>
         <button className="viewer-close" type="button" onClick={() => setSelectedPost(null)} aria-label="닫기" title="닫기"><CloseIcon /></button>
-        <img className="viewer-image" src={mediaUrl(selectedPost.image)} alt="Instagram 게시물 크게 보기" />
-        <button className="viewer-delete" type="button" onClick={() => removePost(selectedPost.id)} aria-label="게시물 삭제" title="게시물 삭제"><TrashIcon /></button>
+        <img className="viewer-image" src={mediaUrl(viewerPost.image)} alt="Instagram 게시물 크게 보기" onError={() => recoverPostImage(viewerPost.id, viewerPost.image)} />
+        <button className="viewer-delete" type="button" onClick={() => removePost(viewerPost.id)} aria-label="게시물 삭제" title="게시물 삭제"><TrashIcon /></button>
       </div>
     </div>}
     {editorFiles.length > 0 && editorPreviewUrl && <div className="photo-editor" role="dialog" aria-modal="true" aria-label="사진 편집"><div className="editor-panel"><div className="editor-heading"><button className="editor-close" type="button" aria-label="편집 취소" onClick={() => { setEditorFiles([]); setMessage(""); if (editorFromOnboarding) { setPreview(false); setHomeStep(2); } }}>×</button><span>{editorIndex + 1} / {editorFiles.length}</span></div><div className="crop-stage crop-portrait" onPointerDown={editorPointerDown} onPointerMove={editorPointerMove} onPointerUp={editorPointerUp} onPointerCancel={editorPointerUp} onWheel={editorWheel}><img src={editorPreviewUrl} alt="편집할 사진" onLoad={(event) => setEditorImageSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })} style={{ objectFit: editorImageSize && editorImageSize.width <= editorImageSize.height ? "cover" : "contain", transform: `translate(${editorOffsetX * 100}%, ${editorOffsetY * 100}%) scale(${editorZoom})` }} /><div className="crop-grid" aria-hidden="true"><i /><i /><i /><i /></div></div><button className="editor-confirm" type="button" onClick={() => void confirmCrop()}>{editorIndex + 1 < editorFiles.length ? "다음 →" : "→"}</button></div></div>}
