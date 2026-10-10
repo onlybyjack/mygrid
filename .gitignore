@@ -6,3 +6,5 @@ tsconfig.tsbuildinfo
 .expo/
 .gjc/
 artifacts/
+test-results/
+playwright-report/
