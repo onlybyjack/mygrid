@@ -500,7 +500,7 @@ export default function Page() {
         setMessage("그리드 캡처를 읽지 못했어요. 다시 선택해 주세요.");
         return;
       }
-      openPhotoEditor(selected, true);
+      openPhotoEditor(selected, !preview);
     } catch {
       input.value = "";
       setMessage("그리드 캡처를 읽지 못했어요. 다시 선택해 주세요.");
@@ -517,7 +517,7 @@ export default function Page() {
       setMessage("그리드 캡처를 읽지 못했어요. 다시 붙여넣어 주세요.");
       return;
     }
-    openPhotoEditor(selected, true);
+    openPhotoEditor(selected, !preview);
   }
 
   function startTilePress(event: React.PointerEvent<HTMLButtonElement>, postId: string) {

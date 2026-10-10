@@ -74,6 +74,14 @@ test.describe("photo editor", () => {
     await expect(tiles(page)).toHaveCount(0);
   });
 
+  test("cancelling an import started from the feed stays on the feed", async ({ page }) => {
+    await openEmptyFeed(page);
+    await addPhotos(page, [RED]);
+    await page.getByLabel("인스타 프로필 캡처로 피드 채우기").setInputFiles([profileScreenshot(2)]);
+    await page.getByRole("button", { name: "편집 취소" }).click();
+    await expectAllTilesLoaded(page, 1);
+  });
+
   test("new photos appear first, in the order they were picked", async ({ page }) => {
     await openEmptyFeed(page);
     await addPhotos(page, [RED]);
