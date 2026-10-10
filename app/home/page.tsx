@@ -207,14 +207,16 @@ export default function Page() {
 
   useEffect(() => {
     let mounted = true;
-    let savedUsername = "";
+    let onboarded = false;
     const revealTimer = window.setTimeout(() => {
       if (mounted) setHydrated(true);
     }, 420);
     try {
-      const identity = JSON.parse(localStorage.getItem(IDENTITY_KEY) || "{}") as { username?: unknown };
-      savedUsername = typeof identity.username === "string" ? identity.username : "";
+      const identity = JSON.parse(localStorage.getItem(IDENTITY_KEY) || "{}") as { username?: unknown; onboarded?: unknown };
+      const savedUsername = typeof identity.username === "string" ? identity.username : "";
+      onboarded = identity.onboarded === true;
       setUsername(savedUsername);
+      if (onboarded) setPreview(true);
     } catch {
       localStorage.removeItem(IDENTITY_KEY);
     }
@@ -222,7 +224,7 @@ export default function Page() {
       if (!mounted) return;
       const restored = savedDrafts.map((post) => ({ id: post.id, image: post.image, draft: true }));
       setDrafts(restored);
-      if (restored.length && savedUsername) setPreview(true);
+      if (restored.length) setPreview(true);
     }).catch(() => undefined);
     return () => {
       mounted = false;
@@ -252,14 +254,19 @@ export default function Page() {
   const allPosts = drafts;
   draftsRef.current = drafts;
 
-  function saveIdentity(nextUsername: string) {
-    localStorage.setItem(IDENTITY_KEY, JSON.stringify({ username: nextUsername }));
+  function saveIdentity(identity: { username?: string; onboarded?: boolean }) {
+    try {
+      const current = JSON.parse(localStorage.getItem(IDENTITY_KEY) || "{}") as object;
+      localStorage.setItem(IDENTITY_KEY, JSON.stringify({ ...current, ...identity }));
+    } catch {
+      /* Storage can be unavailable in private mode; the feed still works for this session. */
+    }
   }
 
   function updateUsername(value: string) {
     const next = value.replace(/^@+/, "");
     setUsername(next);
-    saveIdentity(next);
+    saveIdentity({ username: next });
   }
 
   function openPhotoEditor(files: File[], fromOnboarding = false) {
@@ -327,6 +334,7 @@ export default function Page() {
     setEditorFiles([]);
     setMessage("");
     setPreview(true);
+    saveIdentity({ onboarded: true });
   }
 
   function editorPanBounds(zoom = editorZoom) {
@@ -419,6 +427,7 @@ export default function Page() {
   function startEmptyProfile() {
     setPreview(true);
     setMessage("");
+    saveIdentity({ onboarded: true });
   }
 
   function continueToScreenshot() {
